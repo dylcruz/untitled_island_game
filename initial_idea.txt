@@ -1,0 +1,12 @@
+Simple Island Survival Simulation Game
+
+Premise: Between 1 and 8 "survivors" wash up on the shores of an island. They will need to survive for a certain amount of days before help arrives. They will be faced with decisions that alter the game, with some leading towards a bad ending (loss), and others leading to a good ending (rescue).
+
+The Island: Generated at random. Can be basic for the MVP. Need to have food, water, and material sources.
+
+The survivors: Generated at random (sex, names, traits, etc.). 
+
+Gameplay: The player watches the survivors live on the island. Their only task is to make decisions when presented to them by the game. There should be a day / night cycle, and a way for the player to "fast-forward" time. The number of days needed to survive, and number of initial survivors, should be configurable when starting a new game.
+
+Tech stack: I want this to all be done in the browser. We can decide on what technology to use. I want it to be lightweight.
+
