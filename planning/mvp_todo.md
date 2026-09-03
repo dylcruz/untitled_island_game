@@ -1,8 +1,9 @@
 # MVP Implementation TODO
 
-This checklist translates `mvp_project_plan.md` and `technical_plan.md` into a
-continuation path from the verified Milestone 0 foundation. It is intended to be
-the starting document for future implementation sessions.
+This checklist translates `mvp_project_plan.md` and `technical_plan.md` into the
+current implementation path. Milestones 0 and 1 are complete. Milestone 2's
+software implementation and automated verification are complete; its required
+five-person blind-playtest gate remains open.
 
 ## Current Baseline
 
@@ -22,9 +23,11 @@ the starting document for future implementation sessions.
 - [x] Add a guarded schema/rules-versioned local-save envelope and adapter.
 - [x] Pass the current typecheck, lint, format, unit-test, production-build, and
   headless-simulation checks.
-- [ ] Run the four existing Playwright foundation tests in a Chromium-capable
-  environment and manually confirm smooth desktop and 360 CSS-pixel rendering.
-- [ ] Add `node_modules/`, `dist/`, `test-results/`, and Playwright reports to
+- [x] Run the foundation Playwright flows in Chromium desktop and emulated
+  360 CSS-pixel mobile environments.
+- [ ] Manually confirm smooth rendering on representative desktop and physical
+  mobile hardware.
+- [x] Add `node_modules/`, `dist/`, `test-results/`, and Playwright reports to
   `.gitignore` before staging repository changes.
 
 ## Milestone 1: Shortened Technical End-To-End Slice
@@ -35,125 +38,131 @@ not a change to the final three-survivor product configuration.
 
 ### Configuration And State
 
-- [ ] Add an internal test/slice configuration path that permits one survivor
+- [x] Add an internal test/slice configuration path that permits one survivor
   and a shortened rescue clock without exposing either as an MVP player option.
-- [ ] Keep the production/default and persisted MVP contract fixed at three
+- [x] Keep the production/default and persisted MVP contract fixed at three
   survivors and 14 days.
-- [ ] Expand `GameState` with stored food, water, and materials; survivor health,
+- [x] Expand `GameState` with stored food, water, and materials; survivor health,
   hunger, thirst, and energy; active tasks; reservations; active event; scheduled
   effects; event schedule; and meaningful history entries.
-- [ ] Keep all new state plain, serializable data with stable IDs rather than
+- [x] Keep all new state plain, serializable data with stable IDs rather than
   object or function references.
-- [ ] Centralize all initial capacities, rates, thresholds, task durations,
+- [x] Centralize all initial capacities, rates, thresholds, task durations,
   yields, and shortened-slice values in typed tuning/configuration.
-- [ ] Increment the rules version when the authoritative simulation/content
+- [x] Increment the rules version when the authoritative simulation/content
   contract changes, and update persistence validation accordingly.
 
 ### Time, Needs, And Resources
 
-- [ ] Implement derived time of day, daylight/nighttime phases, dawn boundaries,
+- [x] Implement derived time of day, daylight/nighttime phases, dawn boundaries,
   and exact rescue-tick handling using integer ticks.
-- [ ] Accumulate hunger, thirst, and energy deterministically.
-- [ ] Consume stored food and water through explicit self-care tasks.
-- [ ] Apply health damage only after documented critical need thresholds.
-- [ ] Model source availability separately from stored resources.
-- [ ] Replenish fresh water and forage at dawn up to their caps.
-- [ ] Replenish forest materials slowly and keep wreckage finite.
-- [ ] Guarantee that gathering never consumes or yields more than available,
+- [x] Accumulate hunger, thirst, and energy deterministically.
+- [x] Consume stored food and water through explicit self-care tasks.
+- [x] Apply health damage only after documented critical need thresholds.
+- [x] Model source availability separately from stored resources.
+- [x] Replenish fresh water and forage at dawn up to their caps.
+- [x] Replenish forest materials slowly and keep wreckage finite.
+- [x] Guarantee that gathering never consumes or yields more than available,
   unreserved source output.
 
 ### Autonomous Tasks And Movement
 
-- [ ] Implement basic task selection for drinking, eating, resting/sleeping, and
+- [x] Implement basic task selection for drinking, eating, resting/sleeping, and
   gathering food, water, or materials.
-- [ ] Enforce nighttime return-to-camp and sleep, with critical self-care as the
+- [x] Enforce nighttime return-to-camp and sleep, with critical self-care as the
   documented override.
-- [ ] Store a structured reason code and display parameters for every selected
+- [x] Store a structured reason code and display parameters for every selected
   task.
-- [ ] Create reservations containing stable IDs, task/source targets, and
+- [x] Create reservations containing stable IDs, task/source targets, and
   expected yields.
-- [ ] Release reservations on completion, interruption, invalidation, and death.
-- [ ] Preserve the rule that ordinary policy changes do not reverse valid travel
+- [x] Release reservations on completion, interruption, invalidation, and death.
+- [x] Preserve the rule that ordinary policy changes do not reverse valid travel
   already underway.
-- [ ] Verify that movement cannot strand a survivor or prevent critical
+- [x] Verify that movement cannot strand a survivor or prevent critical
   self-care.
 
 ### Placeholder Event Flow
 
-- [ ] Define three strictly typed placeholder event templates.
-- [ ] Implement eligibility, deterministic selection, one active unresolved
+- [x] Define three strictly typed placeholder event templates.
+- [x] Implement eligibility, deterministic selection, one active unresolved
   event, and automatic simulation pause at the decision boundary.
-- [ ] Add `select-event-choice` and `acknowledge-event-result` commands with
+- [x] Add `select-event-choice` and `acknowledge-event-result` commands with
   typed rejection reasons.
-- [ ] Show an immediate result state before resuming simulation.
-- [ ] Make at least one choice schedule a plain-data delayed consequence.
-- [ ] Resolve delayed effects, health/death, rescue, and terminal entry in the
+- [x] Show an immediate result state before resuming simulation.
+- [x] Make at least one choice schedule a plain-data delayed consequence.
+- [x] Resolve delayed effects, health/death, rescue, and terminal entry in the
   documented within-tick order.
-- [ ] Implement both rescue victory and survivor-death defeat in the shortened
+- [x] Implement both rescue victory and survivor-death defeat in the shortened
   slice.
 
 ### Minimal Player Interface
 
-- [ ] Display day/time, rescue countdown, stored resources, source availability,
+- [x] Display day/time, rescue countdown, stored resources, source availability,
   survivor needs/health, current task/destination/reason, and recent history.
-- [ ] Present the placeholder decision and result states with semantic HTML and
+- [x] Present the placeholder decision and result states with semantic HTML and
   keyboard/touch-operable choices.
-- [ ] Disable or explain invalid commands using simulation-provided rejection
+- [x] Disable or explain invalid commands using simulation-provided rejection
   reasons rather than duplicated React rules.
-- [ ] Checkpoint saves at new-game start, day boundaries, event activation,
+- [x] Checkpoint saves at new-game start, day boundaries, event activation,
   choice, result acknowledgement, terminal entry, and visibility loss.
-- [ ] Play a complete shortened run from setup through victory or defeat without
+- [x] Play a complete shortened run from setup through victory or defeat without
   developer intervention.
 
 ### Milestone 1 Verification Gate
 
-- [ ] Unit-test need accumulation, resource consumption, gathering,
+- [x] Unit-test need accumulation, resource consumption, gathering,
   replenishment, and health damage.
-- [ ] Unit-test reservation limits and release on every required path.
-- [ ] Unit-test nighttime scheduling and critical overrides.
-- [ ] Unit-test event trigger, choice, result, resume, and delayed consequence.
-- [ ] Unit-test final-tick ordering among delayed effects, death, and rescue.
-- [ ] Prove identical outcomes for equivalent commands at equivalent ticks under
+- [x] Unit-test reservation limits and release on every required path.
+- [x] Unit-test nighttime scheduling and critical overrides.
+- [x] Unit-test event trigger, choice, result, resume, and delayed consequence.
+- [x] Unit-test final-tick ordering among delayed effects, death, and rescue.
+- [x] Prove identical outcomes for equivalent commands at equivalent ticks under
   `1x`, `3x`, and `8x` schedules.
-- [ ] Add a deterministic headless policy that can finish the shortened run.
-- [ ] Add Playwright coverage for a complete shortened run and decision pause.
-- [ ] Run `npm run typecheck`, `npm run lint`, `npm run format`,
+- [x] Add a deterministic headless policy that can finish the shortened run.
+- [x] Add Playwright coverage for a complete shortened run and decision pause.
+- [x] Run `npm run typecheck`, `npm run lint`, `npm run format`,
   `npm test -- --run`, `npm run build`, `npm run simulate`, and
   `npm run test:e2e`.
 
 ## Milestone 2: Three-Survivor Proof Of Fun
 
-- [ ] Replace the slice configuration with the representative three-survivor,
-  14-day production game.
-- [ ] Generate three distinct survivors with stable IDs and visual variation.
-- [ ] Implement at least six compatible traits and assign two per survivor.
-- [ ] Add morale, temporary injury, recovery, and trait modifiers.
-- [ ] Implement shelter condition, decay, nighttime protection/recovery, and
+- [x] Promote the representative three-survivor, 14-day game to the default
+  production path while retaining the internal slice for regression coverage.
+- [x] Generate three distinct survivors with stable IDs and visual variation.
+- [x] Implement at least six compatible traits and assign two per survivor.
+- [x] Add morale, temporary injury, recovery, and trait modifiers.
+- [x] Implement shelter condition, decay, nighttime protection/recovery, and
   repair material costs.
-- [ ] Implement all five camp priorities: Balanced, Secure Water, Find Food,
+- [x] Implement all five camp priorities: Balanced, Secure Water, Find Food,
   Build And Repair, and Recover.
-- [ ] Enforce one successful priority change per numbered in-game day.
-- [ ] Implement deterministic rotating assignment order and group-aware source
+- [x] Enforce one successful priority change per numbered in-game day.
+- [x] Implement deterministic rotating assignment order and group-aware source
   and task reservations.
-- [ ] Add all critical self-care and nighttime hard constraints before policy
+- [x] Add all critical self-care and nighttime hard constraints before policy
   scoring.
-- [ ] Implement early (days 1–4), middle (days 5–10), and late (days 11–14)
+- [x] Implement early (days 1–4), middle (days 5–10), and late (days 11–14)
   derived run phases.
-- [ ] Add eight representative events across resource, exploration, conflict,
+- [x] Add eight representative events across resource, exploration, conflict,
   injury, shelter, trait, and follow-up categories.
-- [ ] Reference at least one earlier choice in a later event or ending.
-- [ ] Add a survivor-specific ending summary and basic ending quality.
-- [ ] Instrument event counts, maximum decision gaps, task reasons, speed usage,
+- [x] Reference at least one earlier choice in a later event or ending.
+- [x] Add a survivor-specific ending summary and basic ending quality.
+- [x] Instrument event counts, maximum decision gaps, task reasons, speed usage,
   pause/hidden time, and run duration without feeding telemetry into simulation.
-- [ ] Run invariant simulations across many fixed seeds and verify no stuck
+- [x] Run invariant simulations across many fixed seeds and verify no stuck
   movement, idle loops, invalid tasks, or conflicting reservations.
 - [ ] Complete the five-person blind-playtest gate from the MVP plan before
   investing in final content or cosmetic polish.
 
 ## Milestone 3: Event Content And Presentation
 
-- [ ] Complete data-driven event eligibility, phase weighting, cooldowns,
-  repeatability, participant selection, and fallback scheduling.
+M2 supplied the representative event architecture and initial content. This
+milestone completes and tunes the final content pool.
+
+- [x] Implement data-driven eligibility, phase weighting, repeatability,
+  participant selection, and deadline-aware fallback scheduling for the
+  representative M2 pool.
+- [ ] Add per-template cooldowns and finalize scheduling behavior for the
+  expanded content pool.
 - [ ] Define consistent centralized probability ranges for low, moderate, and
   high risk.
 - [ ] Expand to 12–15 total interactive templates.
@@ -163,13 +172,16 @@ not a change to the final three-survivor product configuration.
 - [ ] Ensure a typical completed run presents 8–10 decisions.
 - [ ] Keep normal event spacing at or above 0.75 days and normal maximum gaps at
   or below two days.
-- [ ] Prevent non-repeatable templates from repeating within a run.
+- [x] Prevent non-repeatable templates from repeating within a run.
 - [ ] Discard irrelevant participant-bound delayed effects with a history reason.
-- [ ] Expand to the final six-to-eight-trait pool with compatible combinations.
+- [x] Establish a six-trait baseline with compatible combinations.
+- [ ] Revisit trait breadth and tuning during final content playtesting; expand
+  to seven or eight only if it improves replay variation without obscuring
+  survivor roles.
 - [ ] Add final fixed-island presentation, seeded cosmetic-only variation,
   portraits, status feedback, and meaningful history/result presentation.
-- [ ] Verify that events never contradict resources, participants, phase, or
-  prior state.
+- [ ] Re-run resource, participant, phase, and prior-state consistency checks
+  across the expanded final event pool; the representative M2 pool is verified.
 
 ## Milestone 4: Complete Browser Experience
 
@@ -177,20 +189,24 @@ not a change to the final three-survivor product configuration.
 - [ ] Offer Resume for compatible running, decision, event-result, victory, and
   defeat checkpoints.
 - [ ] Confirm before replacing an existing resumable run.
-- [ ] Complete automatic checkpoint wiring and unobtrusive save/failure status.
+- [x] Wire automatic checkpoints for new game, day boundaries, priorities,
+  event activation/choice/result, terminal entry, and visibility loss.
+- [ ] Add unobtrusive player-facing save/failure status.
 - [ ] Preserve an unacknowledged terminal checkpoint, then clear it after ending
   acknowledgement.
-- [ ] Handle corrupt, oversized, missing, unknown-content, schema-incompatible,
-  and rules-incompatible saves safely.
+- [x] Reject corrupt, missing, unknown-content, schema-incompatible, and
+  rules-incompatible save data safely in the persistence adapter.
+- [ ] Add an oversized-save guard and player-facing invalid-save recovery flow.
 - [ ] Add the first-run introduction covering goals, autonomous behavior,
   resources, camp priority, decisions, save/resume, and time controls.
-- [ ] Complete responsive desktop and 360 CSS-pixel mobile layouts.
-- [ ] Ensure all controls work with keyboard and touch, have visible focus, and
-  meet 44-by-44 CSS-pixel touch targets.
-- [ ] Ensure critical meaning never depends on Canvas or color alone.
+- [x] Complete the current production layout for desktop and 360 CSS-pixel
+  mobile viewports.
+- [x] Ensure current controls work with keyboard and emulated touch, have
+  visible focus, and meet 44-by-44 CSS-pixel touch targets.
+- [x] Ensure critical meaning never depends on Canvas or color alone.
 - [ ] Add selective ARIA live announcements for injury, death, depletion,
   shelter damage, decisions, and rescue approach.
-- [ ] Respect `prefers-reduced-motion`.
+- [x] Respect `prefers-reduced-motion`.
 - [ ] Implement same-seed restart, randomized new game, and ending acknowledgement.
 - [ ] Run Playwright flows for setup, complete run, priority limit, decisions,
   visibility, resume states, invalid saves, endings, keyboard, 360px touch, and
@@ -198,15 +214,17 @@ not a change to the final three-survivor product configuration.
 
 ## Milestone 5: Balance And Release Candidate
 
-- [ ] Implement versioned conservative, resource-greedy, and deterministic
-  random/fuzz policies using policy-owned RNG streams.
+- [x] Implement the versioned deterministic M2 conservative headless policy.
+- [ ] Add resource-greedy and deterministic random/fuzz policies using
+  policy-owned RNG streams.
 - [ ] Check in a stable manifest of 10,000 seeds and retain it across tuning
   changes.
 - [ ] Record game seed, policy ID/version/seed, and command trace for every
   invariant failure or failed run.
-- [ ] Produce machine-readable JSON and a concise console report for rescue
-  rates, deaths, resources, policy use, events, gaps, reservations, invariants,
-  and endings.
+- [x] Produce machine-readable JSON for production/slice results, policy use,
+  resources, events, gaps, task reasons, invariants, command traces, and endings.
+- [ ] Add the final concise aggregate console report, death analysis, and
+  release-batch reporting required by the completed policy matrix.
 - [ ] Run leave-one-event-template-out sensitivity batches.
 - [ ] Tune the conservative policy to the documented provisional rescue ranges.
 - [ ] Verify zero initial-state and simulation-invariant failures under every
@@ -231,12 +249,11 @@ support is still needed:
 
 ### Needed Now
 
-- [ ] Install Playwright Chromium and its Linux system dependencies. Preferred
+- [x] Install Playwright Chromium and its Linux system dependencies. Preferred
   command: `npx playwright install --with-deps chromium`.
-- [ ] Permit Playwright/Vite tests to bind a localhost port such as
-  `127.0.0.1:5173`; the current restricted sandbox returns `EPERM` when the test
-  server binds.
-- [ ] Run `npm run test:e2e` after Chromium is installed to close the outstanding
+- [x] Run Playwright/Vite browser checks with permission to bind the local test
+  server.
+- [x] Run `npm run test:e2e` after Chromium is installed to close the outstanding
   Milestone 0 browser gate.
 - [ ] Use a supported active Node.js LTS installation for repeatable development
   and CI, and add a repository version pin (`.nvmrc`, Volta, or equivalent) once
@@ -260,16 +277,19 @@ support is still needed:
 
 ## Required Checks At Every Milestone Handoff
 
-- [ ] Preserve the pure deterministic `src/game/` boundary: no DOM, Canvas,
+The following checks passed for the M2 software handoff and must be repeated for
+each later milestone.
+
+- [x] Preserve the pure deterministic `src/game/` boundary: no DOM, Canvas,
   React, storage, wall clock, or ambient randomness.
-- [ ] Preserve unrelated user work and do not weaken existing tests or
+- [x] Preserve unrelated user work and do not weaken existing tests or
   assertions.
-- [ ] Update focused unit tests for every behavior or public-contract change.
-- [ ] Run typecheck, lint, formatting validation, unit tests, production build,
+- [x] Update focused unit tests for every behavior or public-contract change.
+- [x] Run typecheck, lint, formatting validation, unit tests, production build,
   and the relevant headless/browser checks.
-- [ ] Remove generated `dist/` and test-report artifacts unless they are
+- [x] Remove generated `dist/` and test-report artifacts unless they are
   intentionally retained outside version control.
-- [ ] Update durable `agent_docs/` handoff documentation after substantive
+- [x] Update durable `agent_docs/` handoff documentation after substantive
   Medium/Heavy deployments.
 
 ## Explicit Non-Goals
