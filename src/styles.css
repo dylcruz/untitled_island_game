@@ -1,0 +1,250 @@
+:root {
+  color: #173c3a;
+  background: #edf6f2;
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
+  font-synthesis: none;
+  line-height: 1.5;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+}
+
+button {
+  min-height: 44px;
+  border: 1px solid #28635d;
+  border-radius: 0.6rem;
+  background: #28635d;
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  padding: 0.55rem 0.9rem;
+}
+
+button:hover:not(:disabled),
+button:focus-visible {
+  background: #174d48;
+}
+
+button:focus-visible {
+  outline: 3px solid #e7af45;
+  outline-offset: 2px;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.app-shell {
+  margin: 0 auto;
+  max-width: 1160px;
+  padding: clamp(1.25rem, 3vw, 3rem);
+}
+
+.app-header {
+  margin-bottom: 1.5rem;
+  max-width: 720px;
+}
+
+.eyebrow {
+  color: #a04e38;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  margin: 0 0 0.45rem;
+  text-transform: uppercase;
+}
+
+h1,
+h2,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  font-size: clamp(2.2rem, 6vw, 4.6rem);
+  letter-spacing: -0.04em;
+  line-height: 0.98;
+  margin-bottom: 0.7rem;
+}
+
+h2 {
+  font-size: 1rem;
+  margin-bottom: 0.55rem;
+}
+
+.lede {
+  color: #4b6863;
+  font-size: clamp(1rem, 2vw, 1.15rem);
+  margin-bottom: 0;
+}
+
+.game-layout {
+  align-items: start;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1.55fr) minmax(260px, 0.75fr);
+}
+
+.map-card,
+.control-card {
+  background: #fff;
+  border: 1px solid rgba(40, 99, 93, 0.2);
+  border-radius: 1.1rem;
+  box-shadow: 0 1rem 2.5rem rgba(35, 84, 77, 0.1);
+}
+
+.map-card {
+  overflow: hidden;
+}
+
+.island-canvas {
+  display: block;
+  height: min(65vw, 600px);
+  min-height: 320px;
+  width: 100%;
+}
+
+.map-summary {
+  border-top: 1px solid rgba(40, 99, 93, 0.15);
+  color: #4b6863;
+  font-size: 0.82rem;
+  margin: 0;
+  padding: 0.8rem 1rem 1rem;
+}
+
+.control-card {
+  padding: 1.15rem;
+}
+
+.status-row {
+  align-items: baseline;
+  display: flex;
+  justify-content: space-between;
+}
+
+.status-label {
+  color: #4b6863;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.control-card > p {
+  color: #4b6863;
+  font-size: 0.9rem;
+}
+
+.button-row {
+  display: grid;
+  gap: 0.6rem;
+  grid-template-columns: 1fr 1fr;
+  margin-bottom: 1.2rem;
+}
+
+button.secondary,
+button.speed {
+  background: #edf6f2;
+  color: #28635d;
+}
+
+fieldset {
+  border: 0;
+  margin: 0 0 1.4rem;
+  padding: 0;
+}
+
+legend {
+  color: #4b6863;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  margin-bottom: 0.55rem;
+  text-transform: uppercase;
+}
+
+.speed-grid {
+  display: grid;
+  gap: 0.45rem;
+  grid-template-columns: repeat(4, 1fr);
+}
+
+button.speed.selected {
+  background: #e7af45;
+  border-color: #b87e20;
+  color: #173c3a;
+}
+
+.survivor-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.survivor-list li {
+  align-items: center;
+  border-top: 1px solid rgba(40, 99, 93, 0.14);
+  display: flex;
+  gap: 0.65rem;
+  padding: 0.65rem 0;
+}
+
+.survivor-dot {
+  border: 2px solid #173c3a;
+  border-radius: 50%;
+  display: block;
+  flex: 0 0 1rem;
+  height: 1rem;
+  width: 1rem;
+}
+
+.survivor-list strong,
+.survivor-list small {
+  display: block;
+}
+
+.survivor-list small {
+  color: #4b6863;
+}
+
+.assistive-note {
+  color: #4b6863;
+  font-size: 0.78rem;
+  margin: 1rem 0 0;
+}
+
+@media (max-width: 760px) {
+  .game-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .island-canvas {
+    height: 70vw;
+    min-height: 280px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
