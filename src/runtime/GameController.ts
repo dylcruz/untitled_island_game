@@ -22,6 +22,21 @@ export interface GameControllerOptions {
   onCheckpoint?: (state: GameSnapshot) => void;
 }
 
+export type ActiveSpeed = 1 | 3 | 8;
+
+/** Observable lifecycle classification used by the local playtest timer. */
+export type PlaybackState =
+  'idle' | 'running' | 'manual-paused' | 'hidden' | 'decision' | 'event-result' | 'terminal';
+
+/** Wall-clock timing collected locally for a single started run. */
+export interface RuntimeTimingSummary {
+  wallDurationMs: number;
+  activeBySpeedMs: Record<ActiveSpeed, number>;
+  manualPausedMs: number;
+  hiddenMs: number;
+  decisionMs: number;
+}
+
 function browserScheduler(): FrameScheduler {
   if (typeof window === 'undefined') throw new Error('a scheduler is required outside a browser');
   return {
@@ -63,16 +78,42 @@ export class GameController {
 
   private resumeAfterVisibility = false;
 
+  private hasCheckpointedStart = false;
+
+  private timingStarted = false;
+
+  private timingLastAt: number | null = null;
+
+  private timingWallDurationMs = 0;
+
+  private timingActiveBySpeedMs: Record<ActiveSpeed, number> = {
+    1: 0,
+    3: 0,
+    8: 0,
+  };
+
+  private timingManualPausedMs = 0;
+
+  private timingHiddenMs = 0;
+
+  private timingDecisionMs = 0;
+
+  private timingFinalized = false;
+
   private readonly handleFrame = (timestamp: number): void => {
     this.frameHandle = null;
     if (!this.running || this.hidden) return;
+    const now = this.scheduler.now();
+    this.accountTiming(now);
     const elapsed = this.lastFrameAt === null ? 0 : Math.max(0, timestamp - this.lastFrameAt);
     this.lastFrameAt = timestamp;
-    const statusBeforeStep = this.loop.getState().status;
+    const before = this.loop.getState();
     this.loop.advanceElapsed(elapsed);
-    const statusAfterStep = this.loop.getState().status;
-    const enteredTerminalState = statusBeforeStep === 'running' && statusAfterStep !== 'running';
-    if (enteredTerminalState || timestamp - this.lastPublishedAt >= this.snapshotIntervalMs) {
+    const after = this.loop.getState();
+    const enteredBoundary = before.status === 'running' && after.status !== 'running';
+    const crossedDay = before.clock.day !== after.clock.day;
+    if (enteredBoundary || crossedDay) this.onCheckpoint?.(createSnapshot(after));
+    if (enteredBoundary || timestamp - this.lastPublishedAt >= this.snapshotIntervalMs) {
       this.publish(timestamp);
     }
     if (this.loop.isPaused() && this.loop.getState().status !== 'running') {
@@ -84,6 +125,8 @@ export class GameController {
   };
 
   private readonly handleVisibility = (): void => {
+    const now = this.scheduler.now();
+    this.accountTiming(now);
     const isHidden = this.visibility?.hidden ?? false;
     if (isHidden) {
       this.resumeAfterVisibility = this.running && !this.manuallyPaused;
@@ -140,8 +183,34 @@ export class GameController {
     return this.loop.getAccumulatorMs() / this.getState().config.fixedStepMs;
   }
 
+  public getPlaybackState(): PlaybackState {
+    this.accountTiming(this.scheduler.now());
+    return this.getCurrentPlaybackState();
+  }
+
+  public getTimingSummary(): RuntimeTimingSummary {
+    this.accountTiming(this.scheduler.now());
+    return {
+      wallDurationMs: this.timingWallDurationMs,
+      activeBySpeedMs: { ...this.timingActiveBySpeedMs },
+      manualPausedMs: this.timingManualPausedMs,
+      hiddenMs: this.timingHiddenMs,
+      decisionMs: this.timingDecisionMs,
+    };
+  }
+
   public start(): void {
+    const now = this.scheduler.now();
+    this.accountTiming(now);
     if (this.running || this.hidden) return;
+    if (!this.timingStarted) {
+      this.timingStarted = true;
+      this.timingLastAt = now;
+    }
+    if (!this.hasCheckpointedStart && this.loop.getState().clock.tick === 0) {
+      this.onCheckpoint?.(createSnapshot(this.loop.getState()));
+      this.hasCheckpointedStart = true;
+    }
     this.running = true;
     this.manuallyPaused = false;
     this.loop.setPaused(false);
@@ -150,19 +219,24 @@ export class GameController {
   }
 
   public stop(): void {
+    this.accountTiming(this.scheduler.now());
     this.running = false;
     this.cancelFrame();
     this.loop.stop();
   }
 
   public pause(): void {
+    const now = this.scheduler.now();
+    this.accountTiming(now);
     this.manuallyPaused = true;
     this.loop.setPaused(true);
     this.cancelFrame();
-    this.publish(this.scheduler.now());
+    this.publish(now);
   }
 
   public resume(): void {
+    const now = this.scheduler.now();
+    this.accountTiming(now);
     if (this.hidden || this.loop.getState().status !== 'running') return;
     this.manuallyPaused = false;
     this.loop.setPaused(false);
@@ -172,6 +246,8 @@ export class GameController {
   }
 
   public setSpeed(speed: Speed): void {
+    const now = this.scheduler.now();
+    this.accountTiming(now);
     this.loop.setSpeed(speed);
     if (speed === 0) {
       // A zero-speed loop is still part of the controller lifecycle, but it
@@ -185,22 +261,37 @@ export class GameController {
       this.lastFrameAt = null;
       this.requestFrame();
     }
-    this.publish(this.scheduler.now());
+    this.publish(now);
   }
 
   public dispatch(command: GameCommand): CommandResult {
+    const now = this.scheduler.now();
+    this.accountTiming(now);
     const result = applyCommand(this.loop.getState(), command);
     if (result.accepted) {
       this.loop.setState(result.state);
       this.onCheckpoint?.(createSnapshot(result.state));
-      this.publish(this.scheduler.now());
-      if (result.state.status !== 'running') this.stop();
+      this.publish(now);
+      if (command.type === 'reset-run') {
+        // A reset is a fresh run. It must not inherit an outstanding RAF or
+        // timing anchor from the previous run; the next explicit start starts
+        // both lifecycles.
+        this.cancelFrame();
+        this.running = false;
+        this.manuallyPaused = false;
+        this.resumeAfterVisibility = false;
+        this.loop.stop();
+        this.resetTiming();
+        this.hasCheckpointedStart = true;
+      } else if (result.state.status !== 'running') this.stop();
     }
     return result;
   }
 
   public destroy(): void {
+    this.accountTiming(this.scheduler.now());
     this.stop();
+    this.timingFinalized = true;
     this.visibility?.removeEventListener('visibilitychange', this.handleVisibility);
     this.listeners.clear();
   }
@@ -214,6 +305,64 @@ export class GameController {
       this.scheduler.cancel(this.frameHandle);
       this.frameHandle = null;
     }
+  }
+
+  private getCurrentPlaybackState(): PlaybackState {
+    const status = this.loop.getState().status;
+    if (status === 'victory' || status === 'defeat') return 'terminal';
+    if (this.hidden) {
+      // A decision boundary may have stopped the RAF while its wall-clock
+      // timer remains live; all other stopped/idle states stay uncounted.
+      if (
+        this.timingStarted &&
+        (this.running || status === 'decision' || status === 'event-result')
+      ) {
+        return 'hidden';
+      }
+      return 'idle';
+    }
+    if (status === 'decision' || status === 'event-result') return status;
+    if (!this.timingStarted || !this.running) return 'idle';
+    if (this.manuallyPaused || this.loop.getSpeed() === 0) return 'manual-paused';
+    return status === 'running' ? 'running' : 'idle';
+  }
+
+  private accountTiming(now: number): void {
+    if (this.timingFinalized) return;
+    if (!Number.isFinite(now)) return;
+    if (this.timingLastAt === null) {
+      if (this.timingStarted) this.timingLastAt = now;
+      return;
+    }
+    const elapsed = now - this.timingLastAt;
+    if (elapsed <= 0) return;
+    this.timingLastAt = now;
+    if (!this.timingStarted) return;
+
+    const playbackState = this.getCurrentPlaybackState();
+    if (playbackState === 'idle' || playbackState === 'terminal') return;
+    this.timingWallDurationMs += elapsed;
+    if (playbackState === 'hidden') {
+      this.timingHiddenMs += elapsed;
+    } else if (playbackState === 'decision' || playbackState === 'event-result') {
+      this.timingDecisionMs += elapsed;
+    } else if (playbackState === 'manual-paused') {
+      this.timingManualPausedMs += elapsed;
+    } else {
+      const speed = this.loop.getSpeed();
+      if (speed === 1 || speed === 3 || speed === 8) this.timingActiveBySpeedMs[speed] += elapsed;
+    }
+  }
+
+  private resetTiming(): void {
+    this.timingStarted = false;
+    this.timingLastAt = null;
+    this.timingWallDurationMs = 0;
+    this.timingActiveBySpeedMs = { 1: 0, 3: 0, 8: 0 };
+    this.timingManualPausedMs = 0;
+    this.timingHiddenMs = 0;
+    this.timingDecisionMs = 0;
+    this.timingFinalized = false;
   }
 
   private publish(timestamp: number): void {
