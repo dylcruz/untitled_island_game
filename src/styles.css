@@ -58,10 +58,11 @@ button:disabled {
 
 .app-header {
   margin-bottom: 1.5rem;
-  max-width: 720px;
+  max-width: 760px;
 }
 
-.eyebrow {
+.eyebrow,
+.event-kicker {
   color: #a04e38;
   font-size: 0.75rem;
   font-weight: 800;
@@ -72,6 +73,7 @@ button:disabled {
 
 h1,
 h2,
+h3,
 p {
   margin-top: 0;
 }
@@ -88,6 +90,11 @@ h2 {
   margin-bottom: 0.55rem;
 }
 
+h3 {
+  font-size: 0.95rem;
+  margin-bottom: 0.45rem;
+}
+
 .lede {
   color: #4b6863;
   font-size: clamp(1rem, 2vw, 1.15rem);
@@ -98,7 +105,7 @@ h2 {
   align-items: start;
   display: grid;
   gap: 1rem;
-  grid-template-columns: minmax(0, 1.55fr) minmax(260px, 0.75fr);
+  grid-template-columns: minmax(0, 1.55fr) minmax(300px, 0.75fr);
 }
 
 .map-card,
@@ -129,6 +136,7 @@ h2 {
 }
 
 .control-card {
+  min-width: 0;
   padding: 1.15rem;
 }
 
@@ -159,7 +167,8 @@ h2 {
 }
 
 button.secondary,
-button.speed {
+button.speed,
+button.priority {
   background: #edf6f2;
   color: #28635d;
 }
@@ -185,13 +194,83 @@ legend {
   grid-template-columns: repeat(4, 1fr);
 }
 
-button.speed.selected {
+button.speed.selected,
+button.priority.selected {
   background: #e7af45;
   border-color: #b87e20;
   color: #173c3a;
 }
 
-.survivor-list {
+.stats,
+.priority-panel,
+.survivor-section,
+.history {
+  border-top: 1px solid rgba(40, 99, 93, 0.14);
+  margin-top: 1rem;
+  padding-top: 0.8rem;
+}
+
+.stats dl,
+.need-grid,
+.ending-facts {
+  display: grid;
+  gap: 0.4rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0 0 1rem;
+}
+
+.stats dl div,
+.need-grid div,
+.ending-facts div {
+  background: #edf6f2;
+  border-radius: 0.45rem;
+  min-width: 0;
+  padding: 0.45rem 0.6rem;
+}
+
+.stats dt,
+.need-grid dt,
+.ending-facts dt {
+  color: #4b6863;
+  font-size: 0.75rem;
+  text-transform: capitalize;
+}
+
+.stats dd,
+.need-grid dd,
+.ending-facts dd {
+  font-weight: 800;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.priority-panel p {
+  color: #4b6863;
+  font-size: 0.86rem;
+}
+
+.priority-panel p strong {
+  color: #173c3a;
+}
+
+.priority-availability {
+  border-left: 3px solid #e7af45;
+  padding-left: 0.6rem;
+}
+
+.priority-grid {
+  display: grid;
+  gap: 0.45rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.priority-grid button:last-child {
+  grid-column: 1 / -1;
+}
+
+.survivor-list,
+.survivor-grid,
+.ending-survivors {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -223,10 +302,198 @@ button.speed.selected {
   color: #4b6863;
 }
 
+.survivor-grid {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.survivor-card {
+  background: #f8fcfa;
+  border: 1px solid rgba(40, 99, 93, 0.18);
+  border-left: 4px solid #28635d;
+  border-radius: 0.7rem;
+  min-width: 0;
+  padding: 0.75rem;
+}
+
+.survivor-card-lost {
+  border-left-color: #a04e38;
+  opacity: 0.78;
+}
+
+.survivor-heading {
+  align-items: center;
+  display: flex;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.survivor-avatar {
+  align-items: center;
+  border: 2px solid #173c3a;
+  border-radius: 50%;
+  color: #173c3a;
+  display: inline-flex;
+  flex: 0 0 2.2rem;
+  font-weight: 900;
+  height: 2.2rem;
+  justify-content: center;
+  width: 2.2rem;
+}
+
+.survivor-heading h3 {
+  margin-bottom: 0;
+}
+
+.survivor-variant {
+  color: #4b6863;
+  font-size: 0.7rem;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.survivor-alive {
+  color: #28635d;
+  font-size: 0.72rem;
+  margin-left: auto;
+  text-transform: uppercase;
+}
+
+.survivor-card-lost .survivor-alive {
+  color: #a04e38;
+}
+
+.survivor-traits,
+.survivor-route,
+.survivor-task,
+.survivor-injury {
+  font-size: 0.78rem;
+  margin: 0.5rem 0 0;
+  overflow-wrap: anywhere;
+}
+
+.survivor-traits {
+  color: #28635d;
+}
+
+.survivor-route,
+.survivor-task,
+.survivor-injury {
+  color: #4b6863;
+}
+
+code {
+  background: #edf6f2;
+  border-radius: 0.25rem;
+  color: #173c3a;
+  font-size: 0.72rem;
+  padding: 0.08rem 0.22rem;
+  overflow-wrap: anywhere;
+}
+
 .assistive-note {
   color: #4b6863;
   font-size: 0.78rem;
   margin: 1rem 0 0;
+}
+
+.history ol {
+  color: #4b6863;
+  font-size: 0.82rem;
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+.event-panel,
+.ending {
+  background: #fff9e9;
+  border: 2px solid #b87e20;
+  border-radius: 1rem;
+  box-shadow: 0 1rem 3rem rgba(23, 60, 58, 0.25);
+  inset: 50% auto auto 50%;
+  max-height: calc(100vh - 2rem);
+  max-width: min(42rem, calc(100vw - 2rem));
+  overflow-y: auto;
+  padding: 1.4rem;
+  position: fixed;
+  transform: translate(-50%, -50%);
+  width: 100%;
+  z-index: 5;
+}
+
+.event-panel > p:not(.event-kicker),
+.ending > p {
+  color: #4b6863;
+}
+
+.event-reference {
+  border-left: 3px solid #e7af45;
+  padding-left: 0.6rem;
+}
+
+.event-actions,
+.ending-actions {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.ending h3 {
+  border-top: 1px solid rgba(40, 99, 93, 0.16);
+  margin-top: 1rem;
+  padding-top: 0.8rem;
+}
+
+.ending-facts {
+  margin-bottom: 0.5rem;
+}
+
+.ending-survivors li {
+  border-top: 1px solid rgba(40, 99, 93, 0.14);
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.55rem 0;
+}
+
+.ending-survivors span,
+.ending-choices,
+.task-reasons {
+  color: #4b6863;
+  font-size: 0.8rem;
+}
+
+.ending-choices {
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+.instrumentation {
+  border-top: 1px solid rgba(40, 99, 93, 0.16);
+  margin-top: 1rem;
+  padding-top: 0.2rem;
+}
+
+.instrumentation .ending-facts {
+  margin-bottom: 0.45rem;
+}
+
+.ending-actions {
+  grid-template-columns: 1fr;
+  margin-top: 1rem;
+}
+
+[role='alert'] {
+  background: #fff9e9;
+  border: 1px solid #b87e20;
+  border-radius: 0.6rem;
+  color: #6e3c2e;
+  margin: 1rem 0 0;
+  padding: 0.7rem 0.85rem;
+}
+
+@media (min-width: 900px) {
+  .survivor-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 760px) {
@@ -237,6 +504,38 @@ button.speed.selected {
   .island-canvas {
     height: 70vw;
     min-height: 280px;
+  }
+}
+
+@media (max-width: 420px) {
+  .app-shell {
+    padding: 0.75rem;
+  }
+
+  .control-card {
+    padding: 0.85rem;
+  }
+
+  .island-canvas {
+    min-height: 240px;
+  }
+
+  .button-row {
+    grid-template-columns: 1fr;
+  }
+
+  .priority-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .priority-grid button:last-child {
+    grid-column: auto;
+  }
+
+  .event-panel,
+  .ending {
+    max-height: calc(100vh - 1rem);
+    padding: 1rem;
   }
 }
 

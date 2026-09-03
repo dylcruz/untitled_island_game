@@ -86,6 +86,8 @@ out
 # Nuxt.js build / generate output
 .nuxt
 dist
+test-results/
+playwright-report/
 .output
 
 # Gatsby files
@@ -146,4 +148,3 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
-

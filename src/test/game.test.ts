@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { createIslandState } from '../game/island';
 import { DeterministicRandom, RANDOM_STREAM_NAMES, createRandomStreamStates } from '../game/random';
-import { advanceStep, createGame, createSnapshot } from '../game/simulation';
+import { advanceStep, applyCommand, createGame, createSnapshot } from '../game/simulation';
+import { EVENT_BY_ID } from '../game/events';
 import type { GameState } from '../game/types';
 
 describe('M0 deterministic game core', () => {
@@ -53,7 +54,22 @@ describe('M0 deterministic game core', () => {
 
   it('reaches rescue at the configured terminal tick', () => {
     let state = createGame('rescue-seed');
-    while (state.status === 'running') state = advanceStep(state);
+    while (state.status !== 'victory' && state.status !== 'defeat') {
+      if (state.status === 'running') state = advanceStep(state);
+      else if (state.status === 'decision') {
+        const event = state.activeEvent!;
+        state = applyCommand(state, {
+          type: 'select-event-choice',
+          eventId: event.id,
+          choiceId: EVENT_BY_ID[event.id].choices[0]!.id,
+        }).state;
+      } else {
+        state = applyCommand(state, {
+          type: 'acknowledge-event-result',
+          eventId: state.activeEvent!.id,
+        }).state;
+      }
+    }
 
     expect(state.status).toBe('victory');
     expect(state.clock.tick).toBe(state.config.rescueTick);

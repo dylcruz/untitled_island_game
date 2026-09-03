@@ -1,6 +1,6 @@
 import { TUNING } from './tuning';
 import type { DeterministicRandom } from './random';
-import type { IslandState, Point, SourceState, Waypoint, WaypointId } from './types';
+import type { IslandState, Point, SourceState, Waypoint, WaypointId, SourceId } from './types';
 
 export const AUTHORED_WAYPOINTS: readonly Waypoint[] = [
   { id: 'camp', label: 'Camp', x: 0.28, y: 0.62 },
@@ -34,15 +34,23 @@ export function waypointPosition(id: WaypointId): Point {
 }
 
 export function createIslandState(random: DeterministicRandom): IslandState {
-  const sourceStates: Record<string, SourceState> = {
-    water: { id: 'water', available: TUNING.waterCapacity, capacity: TUNING.waterCapacity },
-    forage: { id: 'forage', available: TUNING.forageCapacity, capacity: TUNING.forageCapacity },
+  const sourceStates: Record<SourceId, SourceState> = {
+    water: { id: 'water', available: TUNING.sourceCaps.water, capacity: TUNING.sourceCaps.water },
+    forage: {
+      id: 'forage',
+      available: TUNING.sourceCaps.forage,
+      capacity: TUNING.sourceCaps.forage,
+    },
     wreckage: {
       id: 'wreckage',
-      available: TUNING.wreckageCapacity,
-      capacity: TUNING.wreckageCapacity,
+      available: TUNING.sourceCaps.wreckage,
+      capacity: TUNING.sourceCaps.wreckage,
     },
-    forest: { id: 'forest', available: TUNING.forestCapacity, capacity: TUNING.forestCapacity },
+    forest: {
+      id: 'forest',
+      available: TUNING.sourceCaps.forest,
+      capacity: TUNING.sourceCaps.forest,
+    },
   };
   return { cosmeticVariant: random.integer(0, 3), sourceStates };
 }
