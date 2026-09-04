@@ -256,6 +256,10 @@ function effectsMatch(left: EffectData, right: EffectData): boolean {
   );
 }
 
+function sameParticipantIds(left: readonly string[], right: readonly string[]): boolean {
+  return left.length === right.length && left.every((id, index) => id === right[index]);
+}
+
 function eventIdsForMode(mode: 'slice' | 'production'): readonly string[] {
   return eventRegistryForMode(mode).map((event) => event.id);
 }
@@ -595,6 +599,15 @@ function isValidGameState(value: unknown): value is GameState {
         effect.sourceChoiceId,
       );
       const authoredDelayedEffect = sourceChoice?.delayedEffect;
+      const matchingChoiceRecord = choiceRecords.some(
+        (record) =>
+          isRecord(record) &&
+          record.eventId === effect.sourceEventId &&
+          record.choiceId === effect.sourceChoiceId &&
+          Array.isArray(record.participantIds) &&
+          Array.isArray(effect.participantIds) &&
+          sameParticipantIds(record.participantIds as string[], effect.participantIds),
+      );
       if (
         !isNonEmptyString(effect.id) ||
         !isIntegerBounded(effect.dueTick, clockTick + 1, config.rescueTick) ||
@@ -602,6 +615,7 @@ function isValidGameState(value: unknown): value is GameState {
         !isNonEmptyString(effect.sourceChoiceId) ||
         !sourceChoice ||
         !authoredDelayedEffect ||
+        !matchingChoiceRecord ||
         !isEffect(effect.effect) ||
         !isNonEmptyString(effect.description) ||
         !effectsMatch(effect.effect, authoredDelayedEffect.effect) ||
