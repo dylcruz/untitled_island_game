@@ -168,19 +168,38 @@ export type ProductionEventId =
   | 'leaking-roof'
   | 'forager-instinct'
   | 'smoke-on-horizon'
-  | 'signal-answer';
+  | 'signal-answer'
+  | 'freshwater-seep'
+  | 'seep-follow-up'
+  | 'storm-front'
+  | 'driftwood-cache'
+  | 'night-watch';
 export type EventId = SliceEventId | ProductionEventId;
 export type ChoiceId = string;
 export type EventCategory =
   'resource' | 'exploration' | 'conflict' | 'injury' | 'shelter' | 'trait' | 'follow-up';
 export type ParticipantRule = 'any' | 'pair' | 'forager' | 'injured';
 export type EffectKind = 'health' | 'resource' | 'need' | 'morale' | 'injury' | 'shelter';
+export type RiskLevel = 'low' | 'moderate' | 'high';
+export type RiskSeverity = 'none' | 'minor' | 'moderate' | 'severe';
+export interface ProbabilityRange {
+  min: number;
+  max: number;
+}
+export interface RiskPresentation {
+  level: RiskLevel;
+  label: string;
+  severity: RiskSeverity;
+  probabilityRange: ProbabilityRange;
+}
 export interface EffectData {
   kind: EffectKind;
   target?: ResourceId | keyof NeedState | InjuryKind;
   amount: number;
   targetScope?: 'participant' | 'group';
   probability?: number;
+  /** The risk band must agree with the containing choice when probability is set. */
+  riskLevel?: RiskLevel;
 }
 export interface EventChoiceDefinition {
   id: ChoiceId;
@@ -189,6 +208,7 @@ export interface EventChoiceDefinition {
   immediateEffects: readonly EffectData[];
   delayedEffect?: { delayTicks: number; effect: EffectData; description: string };
   followUpEventId?: ProductionEventId;
+  risk: RiskPresentation;
 }
 export interface EventDefinition {
   id: EventId;
@@ -197,6 +217,10 @@ export interface EventDefinition {
   earliestTick: number;
   category?: EventCategory;
   phases?: readonly RunPhase[];
+  /** Minimum in-game days before this template may occur again. */
+  cooldownDays?: number;
+  /** Optional phase-specific selection weights; omitted phases use weight. */
+  phaseWeights?: Partial<Record<RunPhase, number>>;
   weight?: number;
   repeatable?: boolean;
   participantRule?: ParticipantRule;
@@ -216,6 +240,7 @@ export interface ScheduledEffect {
   id: string;
   dueTick: number;
   sourceEventId: EventId;
+  sourceChoiceId: ChoiceId;
   participantIds?: string[];
   effect: EffectData;
   description: string;
