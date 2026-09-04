@@ -4,7 +4,7 @@ import { EVENT_BY_ID } from './game/events';
 import { deriveEndingSummary } from './game/endings';
 import { TRAIT_BY_ID } from './game/traits';
 import { createGame, createSnapshot, deriveTime } from './game/simulation';
-import { SLICE_GAME_CONFIG } from './game/tuning';
+import { DEFAULT_GAME_CONFIG, SLICE_GAME_CONFIG } from './game/tuning';
 import type {
   CampPriority,
   CommandRejectionReason,
@@ -112,6 +112,32 @@ const PORTRAIT_VARIANTS = [
   'shell pin',
   'rain hood',
 ];
+
+const SAVE_FAILURE_LABELS: Record<string, string> = {
+  missing: 'No saved expedition is available.',
+  'payload-too-large': 'The saved checkpoint is too large to open safely.',
+  oversized: 'The saved checkpoint is too large to open safely.',
+  'malformed-json': 'The saved checkpoint is damaged and could not be read.',
+  'invalid-envelope': 'The saved checkpoint is not a valid Untitled Island run.',
+  'unsupported-schema': 'The saved checkpoint uses an unsupported format.',
+  'incompatible-rules': 'The saved checkpoint was made with different game rules.',
+  'storage-unavailable': 'Browser storage is unavailable in this window.',
+  'storage-write-failed': 'The checkpoint could not be written to browser storage.',
+};
+
+function saveFailureLabel(reason: string): string {
+  return SAVE_FAILURE_LABELS[reason] ?? `The saved checkpoint could not be opened (${reason}).`;
+}
+
+function randomSeed(): string {
+  const randomPart =
+    typeof crypto !== 'undefined' && 'randomUUID' in crypto
+      ? crypto.randomUUID().slice(0, 8)
+      : Math.floor(Math.random() * 0xffffffff)
+          .toString(36)
+          .padStart(7, '0');
+  return `island-${randomPart}`;
+}
 
 function stableIdentityHash(value: string): number {
   let hash = 0;
@@ -412,23 +438,54 @@ export default function App(): ReactElement {
     () => new LocalSaveAdapter(isSlice ? { key: SLICE_SAVE_STORAGE_KEY } : {}),
     [isSlice],
   );
+  const loadResult = useMemo(() => {
+    if (isSlice) return null;
+    const result = saveAdapter.load();
+    // Never let the production key bootstrap an internal slice checkpoint.
+    if (result.ok && result.state.config.mode !== 'production')
+      return { ok: false as const, reason: 'invalid-envelope' as const };
+    return result;
+  }, [isSlice, saveAdapter]);
   const initialState = useMemo(
-    () => createGame(isSlice ? SLICE_GAME_CONFIG : undefined),
-    [isSlice],
+    () => (loadResult?.ok ? loadResult.state : createGame(isSlice ? SLICE_GAME_CONFIG : undefined)),
+    [isSlice, loadResult],
   );
+  const [snapshot, setSnapshot] = useState<GameSnapshot>(() => createSnapshot(initialState));
+  const [sessionActive, setSessionActive] = useState(isSlice);
+  const [started, setStarted] = useState(false);
+  const [setupSeed, setSetupSeed] = useState(() =>
+    loadResult?.ok ? loadResult.state.seed : DEFAULT_GAME_CONFIG.seed,
+  );
+  const [commandMessage, setCommandMessage] = useState('');
+  const [saveMessage, setSaveMessage] = useState('');
+  const [saveFailure, setSaveFailure] = useState(false);
+  const [announcement, setAnnouncement] = useState('');
+  const [endingAcknowledged, setEndingAcknowledged] = useState(false);
+  const [replacementSeed, setReplacementSeed] = useState<string | null>(null);
+  const [clipboardMessage, setClipboardMessage] = useState('');
+  const [checkpointDismissed, setCheckpointDismissed] = useState(false);
+  const eventPanelRef = useRef<HTMLElement>(null);
+  const endingPanelRef = useRef<HTMLElement>(null);
+  const confirmPanelRef = useRef<HTMLElement>(null);
+  const previousSnapshotRef = useRef<GameSnapshot | null>(null);
   const controller = useMemo(
     () =>
       new GameController(initialState, {
         onCheckpoint: (state) => {
-          saveAdapter.save(state);
+          const result = saveAdapter.save(state);
+          if (result.ok) {
+            setSaveFailure(false);
+            setSaveMessage(
+              `Checkpoint saved at day ${state.clock.day}, step ${state.clock.tick.toLocaleString()}.`,
+            );
+          } else {
+            setSaveFailure(true);
+            setSaveMessage(`Checkpoint not saved: ${saveFailureLabel(result.reason)}`);
+          }
         },
       }),
     [initialState, saveAdapter],
   );
-  const [snapshot, setSnapshot] = useState<GameSnapshot>(() => createSnapshot(initialState));
-  const [started, setStarted] = useState(false);
-  const [commandMessage, setCommandMessage] = useState('');
-  const eventPanelRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     const unsubscribe = controller.subscribe(setSnapshot);
@@ -439,6 +496,55 @@ export default function App(): ReactElement {
   }, [controller]);
 
   useEffect(() => {
+    const previous = previousSnapshotRef.current;
+    previousSnapshotRef.current = snapshot;
+    if (!previous) return;
+    let message = '';
+    if (previous.status !== 'decision' && snapshot.status === 'decision') {
+      const currentEvent = snapshot.activeEvent ? EVENT_BY_ID[snapshot.activeEvent.id] : undefined;
+      message = `Decision required${currentEvent ? `: ${currentEvent.title}` : ''}.`;
+    } else {
+      const previousSurvivors = new Map(
+        previous.survivors.map((survivor) => [survivor.id, survivor]),
+      );
+      const changedSurvivor = snapshot.survivors.find((survivor) => {
+        const prior = previousSurvivors.get(survivor.id);
+        return prior?.injury === null && survivor.injury !== null;
+      });
+      if (changedSurvivor) message = `New injury: ${changedSurvivor.name}.`;
+      const died = snapshot.survivors.find((survivor) => {
+        const prior = previousSurvivors.get(survivor.id);
+        return prior?.alive === true && !survivor.alive;
+      });
+      if (died) message = `${died.name} has died.`;
+      if (!message) {
+        const depleted = Object.values(snapshot.island.sourceStates).find((source) => {
+          const prior = previous.island.sourceStates[source.id];
+          return prior.available > 0 && source.available <= 0;
+        });
+        if (depleted) message = `${formatSourceId(depleted.id)} source depleted.`;
+      }
+      if (!message) {
+        const crossedShelterWatch =
+          previous.shelter.condition > 50 && snapshot.shelter.condition <= 50;
+        const crossedShelterCritical =
+          previous.shelter.condition > 25 && snapshot.shelter.condition <= 25;
+        if (crossedShelterCritical) message = 'Shelter condition is critical.';
+        else if (crossedShelterWatch) message = 'Shelter condition needs watching.';
+      }
+      if (!message) {
+        const rescueWindow = snapshot.config.ticksPerDay;
+        if (
+          previous.clock.tick < snapshot.config.rescueTick - rescueWindow &&
+          snapshot.clock.tick >= snapshot.config.rescueTick - rescueWindow
+        )
+          message = 'Rescue is within one in-game day.';
+      }
+    }
+    if (message) setAnnouncement(message);
+  }, [snapshot]);
+
+  useEffect(() => {
     if (
       !eventPanelRef.current ||
       (snapshot.status !== 'decision' && snapshot.status !== 'event-result')
@@ -446,22 +552,99 @@ export default function App(): ReactElement {
       return;
     const firstAction = eventPanelRef.current.querySelector<HTMLElement>('button');
     firstAction?.focus();
-  }, [snapshot.status, snapshot.activeEvent?.id]);
+  }, [snapshot.status, snapshot.activeEvent?.id, sessionActive]);
 
-  const begin = (): void => {
-    controller.start();
-    setStarted(true);
-  };
-  const reset = (): void => {
-    controller.dispatch({ type: 'reset-run' });
-    setStarted(false);
-    setCommandMessage('');
-  };
-  const selectSpeed = (speed: Speed): void => {
-    controller.setSpeed(speed);
-    if (speed !== 0 && snapshot.status === 'running') {
+  useEffect(() => {
+    if ((snapshot.status !== 'victory' && snapshot.status !== 'defeat') || endingAcknowledged)
+      return;
+    const firstAction = endingPanelRef.current?.querySelector<HTMLElement>('button');
+    firstAction?.focus();
+  }, [snapshot.status, endingAcknowledged, sessionActive]);
+
+  useEffect(() => {
+    if (!replacementSeed) return;
+    const firstAction = confirmPanelRef.current?.querySelector<HTMLElement>('button');
+    firstAction?.focus();
+  }, [replacementSeed]);
+
+  const activateCurrentRun = (): void => {
+    setSessionActive(true);
+    if (snapshot.status === 'running') {
       controller.start();
       setStarted(true);
+    } else {
+      setStarted(false);
+    }
+  };
+  const replaceRun = (seed: string, shouldStart: boolean): void => {
+    const cleanSeed = seed.trim() || DEFAULT_GAME_CONFIG.seed;
+    saveAdapter.clear();
+    const result = controller.dispatch({ type: 'reset-run', seed: cleanSeed });
+    if (!result.accepted) {
+      setCommandMessage(`New expedition rejected: ${COMMAND_REASON_LABELS[result.reason!]}`);
+      return;
+    }
+    setSetupSeed(cleanSeed);
+    setEndingAcknowledged(false);
+    setReplacementSeed(null);
+    setSessionActive(true);
+    setStarted(false);
+    setCommandMessage('');
+    if (shouldStart) {
+      controller.start();
+      setStarted(true);
+    }
+  };
+  const begin = (): void => {
+    if (snapshot.status === 'running' && controller.getSpeed() === 0) controller.setSpeed(1);
+    activateCurrentRun();
+  };
+  const requestReset = (): void => {
+    const proposedSeed = randomSeed();
+    if (snapshot.clock.tick > 0 || snapshot.status !== 'running' || started)
+      setReplacementSeed(proposedSeed);
+    else replaceRun(proposedSeed, false);
+  };
+  const confirmReset = (): void => {
+    if (replacementSeed) replaceRun(replacementSeed, true);
+  };
+  const acknowledgeEnding = (): void => {
+    const cleared = saveAdapter.clear();
+    setEndingAcknowledged(true);
+    setSaveFailure(!cleared);
+    setSaveMessage(
+      cleared
+        ? 'Ending acknowledged; the terminal checkpoint was cleared.'
+        : 'Ending acknowledged, but the terminal checkpoint could not be cleared.',
+    );
+  };
+  const restartEnding = (seed: string): void => replaceRun(seed, true);
+  const resumeSaved = (): void => activateCurrentRun();
+  const startSetupRun = (): void => {
+    if (loadResult?.ok) {
+      setReplacementSeed(setupSeed.trim() || DEFAULT_GAME_CONFIG.seed);
+      return;
+    }
+    replaceRun(setupSeed, true);
+  };
+  const randomizeSeed = (): void => {
+    setSetupSeed(randomSeed());
+    setClipboardMessage('');
+  };
+  const copySeed = async (): Promise<void> => {
+    try {
+      await navigator.clipboard.writeText(setupSeed);
+      setClipboardMessage('Seed copied.');
+    } catch {
+      setClipboardMessage('Copy was unavailable; select the seed to copy it manually.');
+    }
+  };
+  const reset = (): void => requestReset();
+  const selectSpeed = (speed: Speed): void => {
+    controller.setSpeed(speed);
+    if (snapshot.status === 'running') setStarted(true);
+    if (speed !== 0 && snapshot.status === 'running') {
+      controller.start();
     }
   };
   const choose = (choiceId: string): void => {
@@ -538,11 +721,164 @@ export default function App(): ReactElement {
     ? EVENT_BY_ID[selectedChoice.followUpEventId]
     : undefined;
 
+  const hasCompatibleCheckpoint = loadResult?.ok === true;
+  const invalidCheckpointReason =
+    !checkpointDismissed && loadResult && !loadResult.ok && loadResult.reason !== 'missing'
+      ? saveFailureLabel(loadResult.reason)
+      : null;
+
+  if (!isSlice && !sessionActive) {
+    return (
+      <main className="app-shell setup-shell">
+        <header className="app-header">
+          <p className="eyebrow">Milestone 4 · expedition setup</p>
+          <h1>Untitled Island</h1>
+          <p className="lede">
+            Prepare three autonomous survivors for a 14-day rescue run. You set the pace and one
+            camp priority each day; the survivors handle their own work.
+          </p>
+        </header>
+        <section className="setup-card" aria-labelledby="setup-title">
+          <p className="event-kicker">A clear plan before the shoreline</p>
+          <h2 id="setup-title">Start or resume your expedition</h2>
+          <p>
+            Keep all three survivors alive until rescue. Watch water, food, materials, shelter, and
+            health as the camp responds autonomously.
+          </p>
+          <div className="setup-guidance" aria-label="How this run works">
+            <article>
+              <h3>Autonomous survivors</h3>
+              <p>They gather, travel, rest, repair shelter, and care for urgent needs.</p>
+            </article>
+            <article>
+              <h3>Your decisions</h3>
+              <p>
+                Choose a daily priority, use time controls, and respond when island events pause
+                play.
+              </p>
+            </article>
+            <article>
+              <h3>Resources and rescue</h3>
+              <p>Balance shared supplies and shelter while the clock advances toward day 14.</p>
+            </article>
+            <article>
+              <h3>Save and resume</h3>
+              <p>
+                Auto-save checkpoints are stored locally at meaningful boundaries for later resume.
+              </p>
+            </article>
+          </div>
+          <div className="seed-field">
+            <label htmlFor="seed-input">Expedition seed</label>
+            <div className="seed-controls">
+              <input
+                id="seed-input"
+                data-testid="seed-input"
+                type="text"
+                value={setupSeed}
+                onChange={(event) => setSetupSeed(event.target.value)}
+                autoComplete="off"
+                required
+                minLength={1}
+                spellCheck={false}
+              />
+              <button type="button" className="secondary" onClick={randomizeSeed}>
+                Randomize
+              </button>
+              <button type="button" className="secondary" onClick={copySeed}>
+                Copy seed
+              </button>
+            </div>
+            <p className="assistive-note">
+              The same seed always creates the same survivors and island cosmetics.
+            </p>
+            {clipboardMessage && <p className="seed-feedback">{clipboardMessage}</p>}
+          </div>
+          {invalidCheckpointReason && (
+            <div className="save-recovery" role="alert">
+              <strong>Saved expedition unavailable.</strong>
+              <p>{invalidCheckpointReason}</p>
+              <p>Recover by starting a fresh run with the seed above.</p>
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => {
+                  saveAdapter.clear();
+                  setCheckpointDismissed(true);
+                }}
+              >
+                Discard saved checkpoint
+              </button>
+            </div>
+          )}
+          {hasCompatibleCheckpoint && (
+            <section className="resume-summary" aria-label="Saved expedition summary">
+              <h3>Saved expedition ready</h3>
+              <p>
+                Seed <strong>{initialState.seed}</strong> · day {initialState.clock.day} · step{' '}
+                {initialState.clock.tick.toLocaleString()} · status {initialState.status}.
+              </p>
+              <button type="button" onClick={resumeSaved} data-testid="resume-saved">
+                Resume saved expedition
+              </button>
+            </section>
+          )}
+          <div className="setup-actions">
+            <button type="button" onClick={startSetupRun} data-testid="start-expedition">
+              {hasCompatibleCheckpoint ? 'Start new expedition' : 'Start expedition'}
+            </button>
+          </div>
+        </section>
+        {replacementSeed && (
+          <section
+            className="modal-backdrop"
+            role="presentation"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) setReplacementSeed(null);
+            }}
+          >
+            <section
+              ref={confirmPanelRef}
+              className="confirm-dialog"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="replace-title"
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') setReplacementSeed(null);
+                trapDialogFocus(event);
+              }}
+            >
+              <p className="event-kicker">Replace expedition?</p>
+              <h2 id="replace-title">Start a new run with this seed?</h2>
+              <p>
+                Your current checkpoint will be replaced. This cannot be undone from this browser.
+              </p>
+              <div className="dialog-actions">
+                <button type="button" onClick={confirmReset}>
+                  Replace and start
+                </button>
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={() => setReplacementSeed(null)}
+                >
+                  Keep current run
+                </button>
+              </div>
+            </section>
+          </section>
+        )}
+      </main>
+    );
+  }
+
   return (
     <main className="app-shell">
       <header className="app-header">
         <p className="eyebrow">
-          {isSlice ? 'Internal · Milestone 1 technical slice' : 'Milestone 3 · final presentation'}
+          {isSlice
+            ? 'Internal · Milestone 1 technical slice'
+            : 'Milestone 4 · expedition dashboard'}
         </p>
         <h1>Untitled Island</h1>
         <p className="lede">
@@ -550,8 +886,25 @@ export default function App(): ReactElement {
             ? 'Keep one survivor alive, respond to island events, and hold out until rescue.'
             : 'Keep all three survivors alive for 14 days until rescue. Read the island at a glance, follow every survivor’s work, and make informed choices when the shoreline changes.'}
         </p>
+        {saveMessage && (
+          <p
+            className={`save-status${saveFailure ? ' save-status-failure' : ''}`}
+            role={saveFailure ? 'alert' : undefined}
+          >
+            {saveMessage}
+          </p>
+        )}
       </header>
-      <section className="game-layout" aria-label="Island simulation">
+      {announcement && (
+        <p className="announcement" role="status" aria-live="polite" data-testid="announcement">
+          {announcement}
+        </p>
+      )}
+      <section
+        className={isSlice ? 'game-layout slice-layout' : 'game-layout production-layout'}
+        aria-label="Island simulation"
+        data-seed={snapshot.seed}
+      >
         <div className="map-card">
           <CanvasView snapshot={snapshot} />
           <p id="island-summary" className="map-summary">
@@ -563,8 +916,12 @@ export default function App(): ReactElement {
         <aside className="control-card" aria-label="Simulation controls">
           <div className="status-row">
             <span className="status-label">Simulation</span>
-            <strong aria-live="polite">
-              {started && snapshot.status === 'running' ? 'Running' : snapshot.status}
+            <strong>
+              {started && snapshot.status === 'running'
+                ? controller.getSpeed() === 0
+                  ? 'Paused'
+                  : 'Running'
+                : snapshot.status}
             </strong>
           </div>
           <p data-testid="time-status">
@@ -577,9 +934,13 @@ export default function App(): ReactElement {
             <button
               type="button"
               onClick={begin}
-              disabled={started && snapshot.status === 'running'}
+              disabled={started && snapshot.status === 'running' && controller.getSpeed() !== 0}
             >
-              {started ? 'Resume' : 'Begin'}
+              {started && snapshot.status === 'running' && controller.getSpeed() !== 0
+                ? 'Running'
+                : started && snapshot.status === 'running'
+                  ? 'Resume'
+                  : 'Begin'}
             </button>
             <button type="button" className="secondary" onClick={reset}>
               New seed
@@ -717,7 +1078,7 @@ export default function App(): ReactElement {
                   <strong data-testid="active-priority">{activePriority.label}</strong> —{' '}
                   {activePriority.effect}
                 </p>
-                <p className="priority-availability" id="priority-availability" aria-live="polite">
+                <p className="priority-availability" id="priority-availability">
                   {priorityChangeUsed
                     ? `Today's change is used. Another change is available at dawn on day ${snapshot.clock.day + 1}.`
                     : 'One priority change remains available today while the simulation is running.'}
@@ -786,59 +1147,60 @@ export default function App(): ReactElement {
                 </ol>
               </section>
             </>
-          ) : (
-            <>
-              <section className="survivor-section" aria-label="Survivors">
-                <h2>Survivors</h2>
-                <ul className="survivor-grid">
-                  {snapshot.survivors.map((survivor, index) => (
-                    <SurvivorCard
-                      key={survivor.id}
-                      survivor={survivor}
-                      portraitVariant={portraitVariants[index] ?? index % PORTRAIT_VARIANTS.length}
-                    />
-                  ))}
-                </ul>
-              </section>
-              <section
-                className="history"
-                aria-label="Recent history"
-                data-testid="production-history"
-              >
-                <div className="section-heading-row">
-                  <h2>Recent history</h2>
-                  <span className="history-caption">Newest first</span>
-                </div>
-                {snapshot.history.length ? (
-                  <div className="history-log">
-                    {snapshot.history
-                      .slice(-8)
-                      .reverse()
-                      .map((entry) => (
-                        <article
-                          key={entry.id}
-                          className={`history-entry history-entry-${entry.kind}`}
-                        >
-                          <span className="history-meta">
-                            {HISTORY_KIND_LABELS[entry.kind]} ·{' '}
-                            {formatHistoryTick(entry.tick, snapshot.config.ticksPerDay)}
-                          </span>
-                          <span>{entry.message}</span>
-                        </article>
-                      ))}
-                  </div>
-                ) : (
-                  <p className="history-empty">
-                    Begin the run to record camp activity, choices, and effects.
-                  </p>
-                )}
-              </section>
-            </>
-          )}
+          ) : null}
           <p className="assistive-note">
             The map is decorative; survivor details and destinations are listed above.
           </p>
         </aside>
+        {!isSlice && (
+          <section className="production-overview" aria-label="Survivor and history overview">
+            <section className="survivor-section" aria-label="Survivors">
+              <h2>Survivors</h2>
+              <ul className="survivor-grid">
+                {snapshot.survivors.map((survivor, index) => (
+                  <SurvivorCard
+                    key={survivor.id}
+                    survivor={survivor}
+                    portraitVariant={portraitVariants[index] ?? index % PORTRAIT_VARIANTS.length}
+                  />
+                ))}
+              </ul>
+            </section>
+            <section
+              className="history"
+              aria-label="Recent history"
+              data-testid="production-history"
+            >
+              <div className="section-heading-row">
+                <h2>Recent history</h2>
+                <span className="history-caption">Newest first</span>
+              </div>
+              {snapshot.history.length ? (
+                <div className="history-log">
+                  {snapshot.history
+                    .slice(-8)
+                    .reverse()
+                    .map((entry) => (
+                      <article
+                        key={entry.id}
+                        className={`history-entry history-entry-${entry.kind}`}
+                      >
+                        <span className="history-meta">
+                          {HISTORY_KIND_LABELS[entry.kind]} ·{' '}
+                          {formatHistoryTick(entry.tick, snapshot.config.ticksPerDay)}
+                        </span>
+                        <span>{entry.message}</span>
+                      </article>
+                    ))}
+                </div>
+              ) : (
+                <p className="history-empty">
+                  Begin the run to record camp activity, choices, and effects.
+                </p>
+              )}
+            </section>
+          </section>
+        )}
       </section>
 
       {event && snapshot.status === 'decision' && (
@@ -939,7 +1301,7 @@ export default function App(): ReactElement {
         >
           <p className="event-kicker">Decision resolved</p>
           <h2 id="result-title">Decision result</h2>
-          <p aria-live="polite">
+          <p>
             <strong>Outcome:</strong> {snapshot.activeEvent?.result}
           </p>
           <p className="event-reference" data-testid="source-event">
@@ -993,114 +1355,173 @@ export default function App(): ReactElement {
         </section>
       )}
 
-      {endingSummary && (
-        <section className="ending" aria-live="assertive" aria-labelledby="ending-title">
-          <p className="event-kicker">Run complete</p>
-          <h2 id="ending-title">
-            {isSlice
-              ? endingSummary.result === 'victory'
-                ? 'Rescue has arrived'
-                : 'No survivors remain'
-              : endingSummary.result === 'victory'
-                ? 'Victory: rescue has arrived'
-                : 'Defeat: no survivors remain'}
-          </h2>
-          <p>
-            <strong>Result:</strong> {endingSummary.result} · <strong>Quality:</strong>{' '}
-            {endingSummary.quality.replaceAll('-', ' ')}
-          </p>
-          <p>
-            {isSlice
-              ? endingSummary.result === 'victory'
-                ? 'The survivor held out until the exact rescue tick.'
-                : 'The technical slice ends in defeat.'
-              : `${endingSummary.survivors.filter((survivor) => survivor.fate === 'rescued').length} of ${endingSummary.survivors.length} survivors reached rescue.`}
-          </p>
-          <dl className="ending-facts">
-            <div>
-              <dt>Days survived</dt>
-              <dd>{endingSummary.daysSurvived}</dd>
-            </div>
-            <div>
-              <dt>Seed</dt>
-              <dd>{endingSummary.seed}</dd>
-            </div>
-          </dl>
-          <h3>Survivor fates and turning points</h3>
-          <ul className="ending-survivors">
-            {endingSummary.survivors.map((survivor) => (
-              <li key={survivor.survivorId}>
-                <strong>
-                  {survivor.name}: {survivor.fate}
-                </strong>
-                <span>{survivor.summary}</span>
-                {survivor.turningPoints.length > 0 && (
-                  <span>
-                    Turning points:{' '}
-                    {survivor.turningPoints.map((point) => point.description).join(' ')}
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
-          <h3>Notable choices</h3>
-          {endingSummary.notableChoices.length ? (
-            <ol className="ending-choices">
-              {endingSummary.notableChoices.map((choice) => (
-                <li key={`${choice.eventId}-${choice.tick}`}>
-                  {EVENT_BY_ID[choice.eventId].title}: {choice.choiceId} — {choice.result}
+      {endingSummary && !endingAcknowledged && (
+        <section className="modal-backdrop" role="presentation">
+          <section
+            ref={endingPanelRef}
+            className="ending"
+            onKeyDown={trapDialogFocus}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="ending-title"
+            aria-describedby="ending-summary"
+          >
+            <p className="event-kicker">Run complete</p>
+            <h2 id="ending-title">
+              {isSlice
+                ? endingSummary.result === 'victory'
+                  ? 'Rescue has arrived'
+                  : 'No survivors remain'
+                : endingSummary.result === 'victory'
+                  ? 'Victory: rescue has arrived'
+                  : 'Defeat: no survivors remain'}
+            </h2>
+            <p id="ending-summary">
+              <strong>Result:</strong> {endingSummary.result} · <strong>Quality:</strong>{' '}
+              {endingSummary.quality.replaceAll('-', ' ')}
+            </p>
+            <p>
+              {isSlice
+                ? endingSummary.result === 'victory'
+                  ? 'The survivor held out until the exact rescue tick.'
+                  : 'The technical slice ends in defeat.'
+                : `${endingSummary.survivors.filter((survivor) => survivor.fate === 'rescued').length} of ${endingSummary.survivors.length} survivors reached rescue.`}
+            </p>
+            <dl className="ending-facts">
+              <div>
+                <dt>Days survived</dt>
+                <dd>{endingSummary.daysSurvived}</dd>
+              </div>
+              <div>
+                <dt>Seed</dt>
+                <dd>{endingSummary.seed}</dd>
+              </div>
+            </dl>
+            <h3>Survivor fates and turning points</h3>
+            <ul className="ending-survivors">
+              {endingSummary.survivors.map((survivor) => (
+                <li key={survivor.survivorId}>
+                  <strong>
+                    {survivor.name}: {survivor.fate}
+                  </strong>
+                  <span>{survivor.summary}</span>
+                  {survivor.turningPoints.length > 0 && (
+                    <span>
+                      Turning points:{' '}
+                      {survivor.turningPoints.map((point) => point.description).join(' ')}
+                    </span>
+                  )}
                 </li>
               ))}
-            </ol>
-          ) : (
-            <p>No event choices were recorded.</p>
-          )}
-          {runtimeTiming && (
-            <section className="instrumentation" aria-label="Local run instrumentation">
-              <h3>Run instrumentation (local)</h3>
-              <dl className="ending-facts">
-                <div>
-                  <dt>Wall duration</dt>
-                  <dd>{formatDuration(runtimeTiming.wallDurationMs)}</dd>
-                </div>
-                <div>
-                  <dt>Event decisions</dt>
-                  <dd>{snapshot.metrics.interactiveEventCount}</dd>
-                </div>
-                <div>
-                  <dt>Max decision gap</dt>
-                  <dd>{snapshot.metrics.maxDecisionGapTicks} ticks</dd>
-                </div>
-                <div>
-                  <dt>Active time by speed</dt>
-                  <dd>
-                    1x {formatDuration(runtimeTiming.activeBySpeedMs[1])}; 3x{' '}
-                    {formatDuration(runtimeTiming.activeBySpeedMs[3])}; 8x{' '}
-                    {formatDuration(runtimeTiming.activeBySpeedMs[8])}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Paused / hidden / decisions</dt>
-                  <dd>
-                    {formatDuration(runtimeTiming.manualPausedMs)} /{' '}
-                    {formatDuration(runtimeTiming.hiddenMs)} /{' '}
-                    {formatDuration(runtimeTiming.decisionMs)}
-                  </dd>
-                </div>
-              </dl>
-              <p className="task-reasons">
-                <strong>Task reason counts:</strong>{' '}
-                {Object.entries(snapshot.metrics.taskReasonCounts)
-                  .map(([reason, count]) => `${reason}=${count}`)
-                  .join(' · ') || 'none'}
-              </p>
-            </section>
-          )}
-          <div className="ending-actions">
-            <button type="button" onClick={reset}>
-              New seed
-            </button>
-          </div>
+            </ul>
+            <h3>Notable choices</h3>
+            {endingSummary.notableChoices.length ? (
+              <ol className="ending-choices">
+                {endingSummary.notableChoices.map((choice) => (
+                  <li key={`${choice.eventId}-${choice.tick}`}>
+                    {EVENT_BY_ID[choice.eventId].title}: {choice.choiceId} — {choice.result}
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p>No event choices were recorded.</p>
+            )}
+            {runtimeTiming && (
+              <section className="instrumentation" aria-label="Local run instrumentation">
+                <h3>Run instrumentation (local)</h3>
+                <dl className="ending-facts">
+                  <div>
+                    <dt>Wall duration</dt>
+                    <dd>{formatDuration(runtimeTiming.wallDurationMs)}</dd>
+                  </div>
+                  <div>
+                    <dt>Event decisions</dt>
+                    <dd>{snapshot.metrics.interactiveEventCount}</dd>
+                  </div>
+                  <div>
+                    <dt>Max decision gap</dt>
+                    <dd>{snapshot.metrics.maxDecisionGapTicks} ticks</dd>
+                  </div>
+                  <div>
+                    <dt>Active time by speed</dt>
+                    <dd>
+                      1x {formatDuration(runtimeTiming.activeBySpeedMs[1])}; 3x{' '}
+                      {formatDuration(runtimeTiming.activeBySpeedMs[3])}; 8x{' '}
+                      {formatDuration(runtimeTiming.activeBySpeedMs[8])}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Paused / hidden / decisions</dt>
+                    <dd>
+                      {formatDuration(runtimeTiming.manualPausedMs)} /{' '}
+                      {formatDuration(runtimeTiming.hiddenMs)} /{' '}
+                      {formatDuration(runtimeTiming.decisionMs)}
+                    </dd>
+                  </div>
+                </dl>
+                <p className="task-reasons">
+                  <strong>Task reason counts:</strong>{' '}
+                  {Object.entries(snapshot.metrics.taskReasonCounts)
+                    .map(([reason, count]) => `${reason}=${count}`)
+                    .join(' · ') || 'none'}
+                </p>
+              </section>
+            )}
+            <div className="ending-actions">
+              <button type="button" onClick={acknowledgeEnding} data-testid="acknowledge-ending">
+                Acknowledge ending
+              </button>
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => restartEnding(snapshot.seed)}
+              >
+                Restart with same seed
+              </button>
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => restartEnding(randomSeed())}
+              >
+                Restart with randomized seed
+              </button>
+            </div>
+          </section>
+        </section>
+      )}
+      {replacementSeed && sessionActive && (
+        <section
+          className="modal-backdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setReplacementSeed(null);
+          }}
+        >
+          <section
+            ref={confirmPanelRef}
+            className="confirm-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="replace-title-dashboard"
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') setReplacementSeed(null);
+              trapDialogFocus(event);
+            }}
+          >
+            <p className="event-kicker">Replace expedition?</p>
+            <h2 id="replace-title-dashboard">Start a new run?</h2>
+            <p>
+              Your current checkpoint will be replaced. This cannot be undone from this browser.
+            </p>
+            <div className="dialog-actions">
+              <button type="button" onClick={confirmReset}>
+                Replace and start
+              </button>
+              <button type="button" className="secondary" onClick={() => setReplacementSeed(null)}>
+                Keep current run
+              </button>
+            </div>
+          </section>
         </section>
       )}
       {commandMessage && <p role="alert">{commandMessage}</p>}
