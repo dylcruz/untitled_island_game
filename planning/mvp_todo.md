@@ -5,6 +5,7 @@ current implementation path. Milestones 0 and 1 are complete. Milestone 2's
 software implementation and automated verification are complete; its required
 five-person blind-playtest gate remains open. Milestone 3's verified software
 scope is complete; final content playtesting and release validation remain open.
+Milestone 4 implementation is active on `feature/milestone-4-browser-experience`.
 
 ## Current Baseline
 
@@ -201,6 +202,10 @@ milestone completes and tunes the final content pool.
   Chromium desktop/mobile Playwright checks, and 3/3 shortened-slice checks.
 
 ## Milestone 4: Complete Browser Experience
+
+- [ ] Rework the wide-desktop presentation to use the available browser window
+  and keep all survivor cards plus recent history visible without avoidable page
+  scrolling, while preserving the single-column mobile layout.
 
 - [ ] Build the seeded new-game screen and copy/reuse-seed workflow.
 - [ ] Offer Resume for compatible running, decision, event-result, victory, and
