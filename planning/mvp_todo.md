@@ -258,11 +258,11 @@ milestone completes and tunes the final content pool.
   policy-owned RNG streams.
 - [x] Check in a stable manifest of 10,000 seeds and retain it across tuning
   changes.
-- [ ] Record game seed, policy ID/version/seed, and command trace for every
+- [x] Record game seed, policy ID/version/seed, and command trace for every
   invariant failure or failed run.
 - [x] Produce machine-readable JSON for production/slice results, policy use,
   resources, events, gaps, task reasons, invariants, command traces, and endings.
-- [ ] Add the final concise aggregate console report, death analysis, and
+- [x] Add the final concise aggregate console report, death analysis, and
   release-batch reporting required by the completed policy matrix.
 - [ ] Run leave-one-event-template-out sensitivity batches.
 - [ ] Tune the conservative policy to the documented provisional rescue ranges.
