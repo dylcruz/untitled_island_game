@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { ReactElement } from 'react';
+import type { KeyboardEvent as ReactKeyboardEvent, ReactElement } from 'react';
 import { EVENT_BY_ID } from './game/events';
 import { deriveEndingSummary } from './game/endings';
 import { TRAIT_BY_ID } from './game/traits';
@@ -112,6 +112,47 @@ const PORTRAIT_VARIANTS = [
   'shell pin',
   'rain hood',
 ];
+
+function stableIdentityHash(value: string): number {
+  let hash = 0;
+  for (const character of value) hash = (hash * 31 + character.charCodeAt(0)) >>> 0;
+  return hash;
+}
+
+function portraitPresentationVariants(survivors: readonly SurvivorState[]): number[] {
+  const used = new Set<number>();
+  return survivors.map((survivor, index) => {
+    const identityOffset = stableIdentityHash(`${survivor.id}:${survivor.name}`);
+    let presentationVariant =
+      (survivor.visualVariant + identityOffset + index) % PORTRAIT_VARIANTS.length;
+    while (used.has(presentationVariant))
+      presentationVariant = (presentationVariant + 1) % PORTRAIT_VARIANTS.length;
+    used.add(presentationVariant);
+    return presentationVariant;
+  });
+}
+
+function trapDialogFocus(event: ReactKeyboardEvent<HTMLElement>): void {
+  if (event.key !== 'Tab') return;
+  const focusable = Array.from(
+    event.currentTarget.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    ),
+  ).filter((element) => element.getClientRects().length > 0);
+  const first = focusable.at(0);
+  const last = focusable.at(-1);
+  if (!first || !last) {
+    event.preventDefault();
+    return;
+  }
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+}
 
 function titleCase(value: string): string {
   return value.replaceAll('-', ' ').replace(/\b\w/g, (character) => character.toUpperCase());
@@ -267,7 +308,13 @@ function CanvasView({ snapshot }: { snapshot: GameSnapshot }): ReactElement {
   );
 }
 
-function SurvivorCard({ survivor }: { survivor: SurvivorState }): ReactElement {
+function SurvivorCard({
+  survivor,
+  portraitVariant,
+}: {
+  survivor: SurvivorState;
+  portraitVariant: number;
+}): ReactElement {
   const task = survivor.activeTask;
   const traitNames = survivor.traits.map((trait) => TRAIT_BY_ID[trait].name).join(' · ');
   const statusMessages: string[] = [];
@@ -290,11 +337,12 @@ function SurvivorCard({ survivor }: { survivor: SurvivorState }): ReactElement {
     >
       <div className="survivor-heading">
         <span
-          className={`survivor-portrait portrait-${survivor.visualVariant % PORTRAIT_VARIANTS.length}`}
+          className={`survivor-portrait portrait-${portraitVariant}`}
           data-testid="survivor-portrait"
+          data-portrait-variant={portraitVariant}
           data-visual-variant={survivor.visualVariant}
           role="img"
-          aria-label={`Portrait of ${survivor.name}; ${PORTRAIT_VARIANTS[survivor.visualVariant % PORTRAIT_VARIANTS.length]}`}
+          aria-label={`Portrait of ${survivor.name}; ${PORTRAIT_VARIANTS[portraitVariant]}`}
         >
           <span className="portrait-hair" aria-hidden="true" />
           <span
@@ -308,9 +356,7 @@ function SurvivorCard({ survivor }: { survivor: SurvivorState }): ReactElement {
         </span>
         <div>
           <h3>{survivor.name}</h3>
-          <p className="survivor-identity">
-            {PORTRAIT_VARIANTS[survivor.visualVariant % PORTRAIT_VARIANTS.length]} portrait
-          </p>
+          <p className="survivor-identity">{PORTRAIT_VARIANTS[portraitVariant]} portrait</p>
         </div>
         <strong className="survivor-alive">{survivor.alive ? 'Alive' : 'Lost'}</strong>
       </div>
@@ -455,6 +501,7 @@ export default function App(): ReactElement {
   };
 
   const time = deriveTime(snapshot);
+  const portraitVariants = portraitPresentationVariants(snapshot.survivors);
   const event = snapshot.activeEvent ? EVENT_BY_ID[snapshot.activeEvent.id] : null;
   const activePriority = PRIORITY_DETAILS[snapshot.campPolicy.priority];
   const priorityChangeUsed = snapshot.campPolicy.lastChangedDay === snapshot.clock.day;
@@ -744,8 +791,12 @@ export default function App(): ReactElement {
               <section className="survivor-section" aria-label="Survivors">
                 <h2>Survivors</h2>
                 <ul className="survivor-grid">
-                  {snapshot.survivors.map((survivor) => (
-                    <SurvivorCard key={survivor.id} survivor={survivor} />
+                  {snapshot.survivors.map((survivor, index) => (
+                    <SurvivorCard
+                      key={survivor.id}
+                      survivor={survivor}
+                      portraitVariant={portraitVariants[index] ?? index % PORTRAIT_VARIANTS.length}
+                    />
                   ))}
                 </ul>
               </section>
@@ -794,6 +845,7 @@ export default function App(): ReactElement {
         <section
           ref={eventPanelRef}
           className="event-panel"
+          onKeyDown={trapDialogFocus}
           role="dialog"
           aria-modal="true"
           aria-labelledby="event-title"
@@ -880,6 +932,7 @@ export default function App(): ReactElement {
         <section
           ref={eventPanelRef}
           className="event-panel"
+          onKeyDown={trapDialogFocus}
           role="dialog"
           aria-modal="true"
           aria-labelledby="result-title"
@@ -888,6 +941,9 @@ export default function App(): ReactElement {
           <h2 id="result-title">Decision result</h2>
           <p aria-live="polite">
             <strong>Outcome:</strong> {snapshot.activeEvent?.result}
+          </p>
+          <p className="event-reference" data-testid="source-event">
+            <strong>Source event:</strong> {event.title} ({event.id})
           </p>
           {selectedChoice && (
             <p className="selected-choice" data-testid="selected-choice">
