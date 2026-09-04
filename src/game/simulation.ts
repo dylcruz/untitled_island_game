@@ -714,15 +714,25 @@ function participantsFor(state: GameState, event: EventDefinition): string[] | n
   const count = event.participantRule === 'pair' ? 2 : 1;
   return candidates.length >= count ? candidates.slice(0, count).map((value) => value.id) : null;
 }
-function eligibleEvent(state: GameState, event: EventDefinition): boolean {
+function eligibleEvent(
+  state: GameState,
+  event: EventDefinition,
+  options: { ignorePhase?: boolean; allowReplay?: boolean } = {},
+): boolean {
   if (
     event.earliestTick > state.clock.tick ||
-    (!event.repeatable &&
+    (!options.allowReplay &&
+      !event.repeatable &&
       (state.eventSchedule.usedEventIds.includes(event.id) ||
         state.choiceRecords.some((record) => record.eventId === event.id)))
   )
     return false;
-  if (event.phases && !event.phases.includes(deriveRunPhase(state.clock.day))) return false;
+  if (
+    !options.ignorePhase &&
+    event.phases &&
+    !event.phases.includes(deriveRunPhase(state.clock.day))
+  )
+    return false;
   const lastOccurrence = state.choiceRecords.reduce<number | null>(
     (latest, record) =>
       record.eventId === event.id ? Math.max(latest ?? record.tick, record.tick) : latest,
@@ -877,6 +887,42 @@ function activateEvent(state: GameState): void {
       eligible.map((value) => ({ value, weight: selectionWeight(state, value) })),
     );
     state.rngStates.eventSelection = random.exportState();
+  }
+  // Phase bands guide normal event pacing, but a reduced content registry can
+  // exhaust the current band before the next boundary. At the hard production
+  // deadline, prefer an otherwise eligible unused root over violating the
+  // two-day interaction-gap contract.
+  const deadlineTick =
+    state.metrics.lastDecisionTick === null
+      ? null
+      : state.metrics.lastDecisionTick +
+        TUNING.productionEventDeadlineDays * state.config.ticksPerDay;
+  if (!selected && deadlineTick !== null && state.clock.tick >= deadlineTick) {
+    let deadlineEligible = registry.filter(
+      (event) =>
+        event.category !== 'follow-up' &&
+        selectionWeight(state, event) > 0 &&
+        eligibleEvent(state, event, { ignorePhase: true }),
+    );
+    // A leave-one-template-out registry can consume every unused root before
+    // the tenth decision. Replaying a root only after its authored cooldown is
+    // preferable to missing the interaction deadline; ordinary scheduling
+    // continues to treat non-repeatable roots as one-shot content.
+    if (!deadlineEligible.length)
+      deadlineEligible = registry.filter(
+        (event) =>
+          event.category !== 'follow-up' &&
+          event.cooldownDays !== undefined &&
+          selectionWeight(state, event) > 0 &&
+          eligibleEvent(state, event, { ignorePhase: true, allowReplay: true }),
+      );
+    if (deadlineEligible.length) {
+      const random = new DeterministicRandom(state.rngStates.eventSelection);
+      selected = random.pickWeighted(
+        deadlineEligible.map((value) => ({ value, weight: selectionWeight(state, value) })),
+      );
+      state.rngStates.eventSelection = random.exportState();
+    }
   }
   if (!selected) {
     if (state.config.mode === 'production') scheduleProductionRetry(state);

@@ -3,27 +3,65 @@ import { deriveEndingSummary } from '../game/endings';
 import { EVENT_BY_ID, EVENT_DEFINITIONS, PRODUCTION_EVENT_DEFINITIONS } from '../game/events';
 import { advanceStep, applyCommand, createGame, deriveRunPhase } from '../game/simulation';
 import { TRAIT_DEFINITIONS, traitsAreCompatible } from '../game/traits';
-import type { GameState, TaskKind } from '../game/types';
+import { TUNING } from '../game/tuning';
+import type { CampPriority, ChoiceId, EventId, GameState, TaskKind } from '../game/types';
 
 function clearTasks(state: GameState): void {
   state.reservations = [];
   for (const survivor of state.survivors) survivor.activeTask = null;
 }
 
-function autoRun(seed = 'm2-full-run'): GameState {
+const SURVIVAL_CHOICES: Readonly<Partial<Record<EventId, ChoiceId>>> = {
+  'tide-pools': 'harvest',
+  'interior-signal': 'turn-back',
+  'water-dispute': 'hear-them-out',
+  'fallen-palm': 'move-on',
+  'leaking-roof': 'patch',
+  'forager-instinct': 'trust-instinct',
+  'smoke-on-horizon': 'conserve',
+  'signal-answer': 'save-fuel',
+  'freshwater-seep': 'mark-source',
+  'seep-follow-up': 'collect-carefully',
+  'storm-front': 'wait-it-out',
+  'driftwood-cache': 'leave-wood',
+  'night-watch': 'sleep-safe',
+};
+
+function survivalPriority(state: GameState): CampPriority {
+  const living = state.survivors.filter((survivor) => survivor.alive).length;
+  if (state.resources.water < living * TUNING.planner.targetStockPerSurvivor.water) return 'water';
+  if (state.resources.food < living * TUNING.planner.targetStockPerSurvivor.food) return 'food';
+  if (
+    state.survivors.some(
+      (survivor) => survivor.alive && (survivor.needs.health < 60 || survivor.needs.energy <= 35),
+    )
+  )
+    return 'recover';
+  return 'balanced';
+}
+
+function autoRun(seed = 'm2-full-run', survivalStrategy = false): GameState {
   let state = createGame(seed);
   for (
     let guard = 0;
     guard < 20_000 && state.status !== 'victory' && state.status !== 'defeat';
     guard += 1
   ) {
-    if (state.status === 'running') state = advanceStep(state);
-    else if (state.status === 'decision') {
+    if (state.status === 'running') {
+      if (survivalStrategy && state.campPolicy.lastChangedDay !== state.clock.day) {
+        const priority = survivalPriority(state);
+        if (priority !== state.campPolicy.priority)
+          state = applyCommand(state, { type: 'set-camp-priority', priority }).state;
+      }
+      if (state.status === 'running') state = advanceStep(state);
+    } else if (state.status === 'decision') {
       const event = state.activeEvent!;
       state = applyCommand(state, {
         type: 'select-event-choice',
         eventId: event.id,
-        choiceId: EVENT_BY_ID[event.id].choices[0]!.id,
+        choiceId:
+          (survivalStrategy ? SURVIVAL_CHOICES[event.id] : undefined) ??
+          EVENT_BY_ID[event.id].choices[0]!.id,
       }).state;
     } else if (state.status === 'event-result')
       state = applyCommand(state, {
@@ -306,6 +344,64 @@ describe('M2 deterministic production core', () => {
     expect(state.metrics.maxDecisionGapTicks).toBe(1_200);
   });
 
+  it('uses an otherwise eligible root at the deadline when the current phase is exhausted', () => {
+    let state = createGame('deadline-phase-fallback');
+    state.clock.tick = 5_309;
+    state.clock.day = 9;
+    state.eventSchedule.usedEventIds = [
+      'tide-pools',
+      'interior-signal',
+      'water-dispute',
+      'fallen-palm',
+      'leaking-roof',
+      'forager-instinct',
+      'smoke-on-horizon',
+      'freshwater-seep',
+      'driftwood-cache',
+      'night-watch',
+    ];
+    state.eventSchedule.pendingFollowUps = [];
+    state.eventSchedule.nextEventTick = 5_310;
+    state.metrics.lastDecisionTick = 4_110;
+    state.eventSchedule.lastDecisionTick = 4_110;
+
+    state = advanceStep(state);
+
+    expect(state.clock.tick).toBe(5_310);
+    expect(state.status).toBe('decision');
+    expect(state.activeEvent?.id).toBe('storm-front');
+    expect(state.metrics.maxDecisionGapTicks).toBe(1_200);
+  });
+
+  it('replays a cooled-down root at the deadline when reduced content is exhausted', () => {
+    let state = createGame('deadline-cooled-replay');
+    state.clock.tick = 5_309;
+    state.clock.day = 9;
+    state.eventSchedule.usedEventIds = PRODUCTION_EVENT_DEFINITIONS.filter(
+      (event) => event.category !== 'follow-up',
+    ).map((event) => event.id);
+    state.choiceRecords = [
+      {
+        eventId: 'tide-pools',
+        choiceId: 'leave-it',
+        tick: 3_000,
+        participantIds: ['survivor-1'],
+        result: 'The group avoids the slippery rocks.',
+      },
+    ];
+    state.eventSchedule.pendingFollowUps = [];
+    state.eventSchedule.nextEventTick = 5_310;
+    state.metrics.lastDecisionTick = 4_110;
+    state.eventSchedule.lastDecisionTick = 4_110;
+
+    state = advanceStep(state);
+
+    expect(state.clock.tick).toBe(5_310);
+    expect(state.status).toBe('decision');
+    expect(state.activeEvent).not.toBeNull();
+    expect(state.metrics.maxDecisionGapTicks).toBe(1_200);
+  });
+
   it('stops retrying after all root events are exhausted without an unlocked follow-up', () => {
     let state = createGame('exhausted-roots');
     state.eventSchedule.usedEventIds = PRODUCTION_EVENT_DEFINITIONS.filter(
@@ -328,7 +424,7 @@ describe('M2 deterministic production core', () => {
   });
 
   it('completes a playable deterministic 14-day run with bounded decision gaps and serializable metrics', () => {
-    const state = autoRun();
+    const state = autoRun('m2-full-run', true);
     expect(state.status).toBe('victory');
     expect(state.clock.tick).toBe(8_400);
     expect(state.metrics.interactiveEventCount).toBeGreaterThanOrEqual(7);
@@ -342,7 +438,7 @@ describe('M2 deterministic production core', () => {
   });
 
   it('derives survivor fates and quality for victory and defeat without mutating state', () => {
-    const victory = autoRun('ending');
+    const victory = autoRun('m2-full-run', true);
     const before = JSON.stringify(victory);
     const summary = deriveEndingSummary(victory);
     expect(summary.result).toBe('victory');
