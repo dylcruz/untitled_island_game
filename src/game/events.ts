@@ -112,7 +112,7 @@ export const PRODUCTION_EVENT_DEFINITIONS = [
         label: 'Harvest quickly',
         result: 'The group carries shellfish back to camp.',
         immediateEffects: [
-          { kind: 'resource', target: 'food', amount: 4 },
+          { kind: 'resource', target: 'food', amount: 0.25 },
           { kind: 'need', target: 'energy', amount: -6, targetScope: 'participant' },
         ],
         risk: LOW_MINOR,
@@ -278,7 +278,7 @@ export const PRODUCTION_EVENT_DEFINITIONS = [
         label: 'Trust the hunch',
         result: 'The leaves stretch the food supply.',
         immediateEffects: [
-          { kind: 'resource', target: 'food', amount: 5 },
+          { kind: 'resource', target: 'food', amount: 0.25 },
           { kind: 'morale', amount: 4, targetScope: 'participant' },
         ],
         risk: LOW_MINOR,
@@ -373,7 +373,7 @@ export const PRODUCTION_EVENT_DEFINITIONS = [
         label: 'Mark the source',
         result: 'The seep is marked for a later collection run.',
         immediateEffects: [
-          { kind: 'resource', target: 'water', amount: 2 },
+          { kind: 'resource', target: 'water', amount: 0.5 },
           { kind: 'need', target: 'energy', amount: -4, targetScope: 'participant' },
         ],
         followUpEventId: 'seep-follow-up',
@@ -409,7 +409,7 @@ export const PRODUCTION_EVENT_DEFINITIONS = [
         label: 'Collect carefully',
         result: 'The group fills containers without muddying the source.',
         immediateEffects: [
-          { kind: 'resource', target: 'water', amount: 4 },
+          { kind: 'resource', target: 'water', amount: 0.5 },
           { kind: 'morale', amount: 4, targetScope: 'group' },
         ],
         risk: LOW,

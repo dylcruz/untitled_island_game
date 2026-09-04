@@ -78,9 +78,9 @@ export const TUNING = {
    * path for the original M1 economy.
    */
   production: {
-    dawnReplenishment: { water: 0.55, forage: 0.55, forest: 1 },
+    dawnReplenishment: { water: 1.05, forage: 1.25, forest: 1 },
     needRates: { hunger: 0.37, thirst: 0.47, energy: 0.12 },
-    healthDamage: { hunger: 0.5, thirst: 0.8, exhaustion: 0.1 },
+    healthDamage: { hunger: 0.5005, thirst: 0.806, exhaustion: 0.1 },
   },
 } as const;
 export function validateGameConfig(config: GameConfig): GameConfig {
