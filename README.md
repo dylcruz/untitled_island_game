@@ -4,8 +4,11 @@ A deterministic browser survival game about three autonomous survivors waiting
 14 in-game days for rescue. Players control time, choose a daily camp priority,
 and respond to events while managing supplies, shelter, injuries, and morale.
 
-The current build contains the Milestone 2 proof-of-fun implementation. Final
-content, player-facing save/resume, and release balancing are still in progress.
+The current build is the Milestone 3 event-content and presentation build. It
+contains 13 production event templates, including two interactive follow-ups,
+deterministic scheduling, and a fixed authored Canvas island with four seeded
+cosmetic variants. Player-facing save/resume, the required blind-playtest gate,
+final content playtesting, and release validation remain in progress.
 
 ## Run locally
 
@@ -33,8 +36,9 @@ whether the player can:
 - identify one consequential event choice; and
 - recall a survivor-specific turning point.
 
-Milestone 2's blind-playtest gate requires at least four of five participants
-to satisfy those checks.
+The required Milestone 2 blind-playtest gate requires at least four of five
+participants to satisfy those checks, and has not yet been run. Trait breadth
+and the final content-playtest revisit also remain open.
 
 ## Development checks
 
@@ -44,6 +48,6 @@ npm run lint
 npm run format
 npm run test -- --run
 npm run build
-npm run simulate -- --runs=100 --seed=m2-check
+npm run simulate -- --runs=100 --seed=m3-check
 npm run test:e2e
 ```
