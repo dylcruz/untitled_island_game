@@ -5,6 +5,7 @@ current implementation path. Milestones 0 and 1 are complete. Milestone 2's
 software implementation and automated verification are complete; its required
 five-person blind-playtest gate remains open. Milestone 3's verified software
 scope is complete; final content playtesting and release validation remain open.
+Milestone 4 implementation is active on `feature/milestone-4-browser-experience`.
 
 ## Current Baseline
 
@@ -202,32 +203,49 @@ milestone completes and tunes the final content pool.
 
 ## Milestone 4: Complete Browser Experience
 
-- [ ] Build the seeded new-game screen and copy/reuse-seed workflow.
-- [ ] Offer Resume for compatible running, decision, event-result, victory, and
+- [x] Rework the wide-desktop presentation to use the available browser window
+  and keep all survivor cards plus recent history visible without avoidable page
+  scrolling, while preserving the single-column mobile layout.
+
+- [x] Build the seeded new-game screen and copy/reuse-seed workflow.
+- [x] Offer Resume for compatible running, decision, event-result, victory, and
   defeat checkpoints.
-- [ ] Confirm before replacing an existing resumable run.
+- [x] Confirm before replacing an existing resumable run.
 - [x] Wire automatic checkpoints for new game, day boundaries, priorities,
   event activation/choice/result, terminal entry, and visibility loss.
-- [ ] Add unobtrusive player-facing save/failure status.
-- [ ] Preserve an unacknowledged terminal checkpoint, then clear it after ending
+- [x] Add unobtrusive player-facing save/failure status.
+- [x] Preserve an unacknowledged terminal checkpoint, then clear it after ending
   acknowledgement.
 - [x] Reject corrupt, missing, unknown-content, schema-incompatible, and
   rules-incompatible save data safely in the persistence adapter.
-- [ ] Add an oversized-save guard and player-facing invalid-save recovery flow.
-- [ ] Add the first-run introduction covering goals, autonomous behavior,
+- [x] Add an oversized-save guard that rejects over-limit reads before parsing
+  and over-limit writes before storage.
+- [x] Add a player-facing invalid-save recovery flow.
+- [x] Add the first-run introduction covering goals, autonomous behavior,
   resources, camp priority, decisions, save/resume, and time controls.
 - [x] Complete the current production layout for desktop and 360 CSS-pixel
   mobile viewports.
 - [x] Ensure current controls work with keyboard and emulated touch, have
   visible focus, and meet 44-by-44 CSS-pixel touch targets.
 - [x] Ensure critical meaning never depends on Canvas or color alone.
-- [ ] Add selective ARIA live announcements for injury, death, depletion,
+- [x] Add selective ARIA live announcements for injury, death, depletion,
   shelter damage, decisions, and rescue approach.
 - [x] Respect `prefers-reduced-motion`.
-- [ ] Implement same-seed restart, randomized new game, and ending acknowledgement.
-- [ ] Run Playwright flows for setup, complete run, priority limit, decisions,
+- [x] Implement same-seed restart, randomized new game, and ending acknowledgement.
+- [x] Run Playwright flows for setup, complete run, priority limit, decisions,
   visibility, resume states, invalid saves, endings, keyboard, 360px touch, and
   production static-host paths.
+
+### Milestone 4 Verification Gate
+
+- [x] Pass 92/92 unit tests, typecheck, lint, format, and production build.
+- [x] Pass 41 Playwright checks across Chromium desktop and emulated Pixel 7
+  mobile, with the desktop copy of the touch-only flow intentionally skipped.
+- [x] Verify at 1440-by-900 and 1920-by-1080 after eight history entries that
+  all three survivor cards and the full recent history remain within the
+  viewport without document or internal-panel scrolling.
+- [x] Smoke-test the built static preview at `/` and `/?mode=slice` with no
+  console errors or failed asset requests.
 
 ## Milestone 5: Balance And Release Candidate
 
