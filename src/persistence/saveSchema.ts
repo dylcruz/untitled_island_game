@@ -19,6 +19,13 @@ import type {
 export const SAVE_SCHEMA_VERSION = 1 as const;
 export const SAVE_STORAGE_KEY = 'untitled-island:resume';
 export const SLICE_SAVE_STORAGE_KEY = 'untitled-island:internal-slice';
+export const MAX_SAVE_BYTES = 512 * 1024;
+
+export function isSavePayloadWithinLimit(raw: string): boolean {
+  if (raw.length > MAX_SAVE_BYTES) return false;
+  return new TextEncoder().encode(raw).byteLength <= MAX_SAVE_BYTES;
+}
+
 export interface SaveEnvelopeV1 {
   schemaVersion: typeof SAVE_SCHEMA_VERSION;
   rulesVersion: string;
@@ -28,6 +35,7 @@ export interface SaveEnvelopeV1 {
 export type SaveEnvelope = SaveEnvelopeV1;
 export type SaveFailureReason =
   | 'missing'
+  | 'payload-too-large'
   | 'malformed-json'
   | 'invalid-envelope'
   | 'unsupported-schema'
@@ -817,9 +825,10 @@ export function parseSaveEnvelope(
   raw: unknown,
   expectedRulesVersion = RULES_VERSION,
 ): SaveParseResult {
-  if (raw === null || raw === undefined || (typeof raw === 'string' && raw.trim().length === 0))
-    return { ok: false, reason: 'missing' };
+  if (raw === null || raw === undefined) return { ok: false, reason: 'missing' };
   if (typeof raw !== 'string') return { ok: false, reason: 'invalid-envelope' };
+  if (!isSavePayloadWithinLimit(raw)) return { ok: false, reason: 'payload-too-large' };
+  if (raw.trim().length === 0) return { ok: false, reason: 'missing' };
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw) as unknown;
