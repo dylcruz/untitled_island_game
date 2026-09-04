@@ -16,7 +16,9 @@ describe('player-facing game time', () => {
 
   it('formats slice boundaries and rounds to the nearest whole minute', () => {
     expect(formatGameTimestamp(1, 120, 360)).toBe('Day 1 · 6:12 AM');
+    expect(formatGameTimestamp(30, 120, 360)).toBe('Day 1 · 12:00 PM');
     expect(formatGameTimestamp(60, 120, 360)).toBe('Day 1 · 6:00 PM');
+    expect(formatGameTimestamp(90, 120, 360)).toBe('Day 1 · 12:00 AM');
     expect(formatGameTimestamp(119, 120, 360)).toBe('Day 1 · 5:48 AM');
     expect(formatGameTimestamp(120, 120, 360)).toBe('Day 2 · 6:00 AM');
     expect(formatGameTimestamp(360, 120, 360)).toBe('Day 3 · 6:00 AM');
