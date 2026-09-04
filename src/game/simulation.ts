@@ -910,6 +910,11 @@ function activateEvent(state: GameState): void {
   state.metrics.lastDecisionTick = state.clock.tick;
   state.metrics.interactiveEventCount += 1;
   state.eventSchedule.lastDecisionTick = state.clock.tick;
+  if (
+    state.config.mode === 'production' &&
+    state.metrics.interactiveEventCount >= TUNING.productionEventDecisionCap
+  )
+    state.eventSchedule.pendingFollowUps = [];
   addHistory(state, 'event', `${selected.title} requires a decision.`);
 }
 
@@ -1129,7 +1134,13 @@ function selectEventChoice(state: GameState, eventId: EventId, choiceId: string)
       });
     }
   }
-  if (choice.followUpEventId) {
+  // A production run stops accepting interactive decisions at the cap.  Do
+  // not leave a follow-up behind that can never be activated (and would make
+  // an otherwise valid checkpoint fail the schedule invariants).
+  const canScheduleFollowUp =
+    next.config.mode !== 'production' ||
+    next.metrics.interactiveEventCount < TUNING.productionEventDecisionCap;
+  if (choice.followUpEventId && canScheduleFollowUp) {
     const earliestTick =
       next.clock.tick + Math.floor(next.config.ticksPerDay * TUNING.productionEventSpacingDays);
     if (earliestTick < next.config.rescueTick)
@@ -1171,6 +1182,11 @@ export function applyCommand(state: GameState, command: GameCommand): CommandRes
     const activeId = next.activeEvent!.id;
     if (!next.eventSchedule.usedEventIds.includes(activeId))
       next.eventSchedule.usedEventIds.push(activeId);
+    if (
+      next.config.mode === 'production' &&
+      next.metrics.interactiveEventCount >= TUNING.productionEventDecisionCap
+    )
+      next.eventSchedule.pendingFollowUps = [];
     const spacing = regularEventSpacingTicks(next);
     const candidate = next.clock.tick + spacing;
     const hasMore =
