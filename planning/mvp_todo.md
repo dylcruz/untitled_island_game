@@ -218,7 +218,9 @@ milestone completes and tunes the final content pool.
   acknowledgement.
 - [x] Reject corrupt, missing, unknown-content, schema-incompatible, and
   rules-incompatible save data safely in the persistence adapter.
-- [ ] Add an oversized-save guard and player-facing invalid-save recovery flow.
+- [x] Add an oversized-save guard that rejects over-limit reads before parsing
+  and over-limit writes before storage.
+- [ ] Add a player-facing invalid-save recovery flow.
 - [ ] Add the first-run introduction covering goals, autonomous behavior,
   resources, camp priority, decisions, save/resume, and time controls.
 - [x] Complete the current production layout for desktop and 360 CSS-pixel
