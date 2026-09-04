@@ -15,6 +15,12 @@ test('presents the authored island, distinct survivor portraits, and production 
 
   await expect(page.getByTestId('survivor-card')).toHaveCount(3);
   await expect(page.getByTestId('survivor-portrait')).toHaveCount(3);
+  const portraitVariants = await page
+    .getByTestId('survivor-portrait')
+    .evaluateAll((portraits) =>
+      portraits.map((portrait) => portrait.getAttribute('data-portrait-variant')),
+    );
+  expect(new Set(portraitVariants).size).toBe(3);
   await expect(page.getByTestId('survivor-status')).toHaveCount(3);
   await expect(page.locator('meter')).toHaveCount(16);
   await expect(page.getByText('Recent history', { exact: true })).toBeVisible();
@@ -31,13 +37,26 @@ test('presents the authored island, distinct survivor portraits, and production 
   await expect(dialog.getByText(/No supply cost|Supply cost/).first()).toBeVisible();
 
   const firstChoice = dialog.getByTestId('event-choice-card').first();
-  await expect(firstChoice.getByRole('button')).toBeFocused();
-  await firstChoice.getByRole('button').click();
+  const firstChoiceButton = firstChoice.getByRole('button');
+  const lastChoiceButton = dialog.getByTestId('event-choice-card').last().getByRole('button');
+  await expect(firstChoiceButton).toBeFocused();
+  await firstChoiceButton.press('Tab');
+  await expect(lastChoiceButton).toBeFocused();
+  await lastChoiceButton.press('Tab');
+  await expect(firstChoiceButton).toBeFocused();
+  const decisionTitle = await dialog.locator('h2').innerText();
+  await firstChoiceButton.click();
   await expect(page.getByRole('heading', { name: 'Decision result' })).toBeVisible();
+  await expect(page.getByTestId('source-event')).toContainText(decisionTitle);
   await expect(page.getByTestId('selected-choice')).toContainText('Selected choice:');
   await expect(page.getByTestId('result-details')).toContainText('Immediate impact');
   await expect(dialog.getByText('Survivors involved:')).toBeVisible();
-  await expect(dialog.getByRole('button', { name: 'Continue', exact: true })).toBeFocused();
+  const continueButton = dialog.getByRole('button', { name: 'Continue', exact: true });
+  await expect(continueButton).toBeFocused();
+  await continueButton.press('Tab');
+  await expect(continueButton).toBeFocused();
+  await continueButton.press('Shift+Tab');
+  await expect(continueButton).toBeFocused();
 });
 
 test('keeps M3 presentation readable and keyboard-usable at 360px', async ({ page }) => {
@@ -53,4 +72,15 @@ test('keeps M3 presentation readable and keyboard-usable at 360px', async ({ pag
   await page.keyboard.press('Enter');
   await expect(page.getByText('Running', { exact: true })).toBeVisible();
   await expect(page.locator('canvas.island-canvas')).toBeVisible();
+  await page.getByRole('button', { name: '8x', exact: true }).click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible({ timeout: 5_000 });
+  const dialogButtons = dialog.getByRole('button');
+  const firstDialogButton = dialogButtons.first();
+  const lastDialogButton = dialogButtons.last();
+  await firstDialogButton.focus();
+  await firstDialogButton.press('Shift+Tab');
+  await expect(lastDialogButton).toBeFocused();
+  await lastDialogButton.press('Tab');
+  await expect(firstDialogButton).toBeFocused();
 });

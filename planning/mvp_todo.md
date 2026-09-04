@@ -3,7 +3,8 @@
 This checklist translates `mvp_project_plan.md` and `technical_plan.md` into the
 current implementation path. Milestones 0 and 1 are complete. Milestone 2's
 software implementation and automated verification are complete; its required
-five-person blind-playtest gate remains open.
+five-person blind-playtest gate remains open. Milestone 3's verified software
+scope is complete; final content playtesting and release validation remain open.
 
 ## Current Baseline
 
@@ -161,27 +162,43 @@ milestone completes and tunes the final content pool.
 - [x] Implement data-driven eligibility, phase weighting, repeatability,
   participant selection, and deadline-aware fallback scheduling for the
   representative M2 pool.
-- [ ] Add per-template cooldowns and finalize scheduling behavior for the
+- [x] Add per-template cooldowns and finalize scheduling behavior for the
   expanded content pool.
-- [ ] Define consistent centralized probability ranges for low, moderate, and
+- [x] Define consistent centralized probability ranges for low, moderate, and
   high risk.
-- [ ] Expand to 12–15 total interactive templates.
-- [ ] Include at least two interactive follow-up templates in that total.
-- [ ] Include at least three root templates that schedule an automatic delayed
+- [x] Expand to 12–15 total interactive templates (13 production templates).
+- [x] Include at least two interactive follow-up templates in that total.
+- [x] Include at least three root templates that schedule an automatic delayed
   effect or unlock a follow-up.
-- [ ] Ensure a typical completed run presents 8–10 decisions.
-- [ ] Keep normal event spacing at or above 0.75 days and normal maximum gaps at
+- [x] Ensure a typical completed run presents 8–10 decisions (10 in the fresh
+  100-seed verification batch).
+- [x] Keep normal event spacing at or above 0.75 days and normal maximum gaps at
   or below two days.
 - [x] Prevent non-repeatable templates from repeating within a run.
-- [ ] Discard irrelevant participant-bound delayed effects with a history reason.
+- [x] Discard irrelevant participant-bound delayed effects with a history reason.
 - [x] Establish a six-trait baseline with compatible combinations.
 - [ ] Revisit trait breadth and tuning during final content playtesting; expand
   to seven or eight only if it improves replay variation without obscuring
   survivor roles.
-- [ ] Add final fixed-island presentation, seeded cosmetic-only variation,
-  portraits, status feedback, and meaningful history/result presentation.
-- [ ] Re-run resource, participant, phase, and prior-state consistency checks
-  across the expanded final event pool; the representative M2 pool is verified.
+- [x] Add final fixed-island Canvas presentation with four seeded
+  cosmetic-only variants, phase lighting, routes, location symbols,
+  activity/status feedback, deterministic unique portraits, meters, meaningful
+  production history, and risk/cost/impact/result provenance.
+- [x] Re-run resource, participant, phase, and prior-state consistency checks
+  across the expanded final event pool; the fresh 100-seed batch produced
+  exactly 10 decisions per run, 480-tick (0.8-day) spacing, zero invariant
+  failures, and 100/100 wins with all survivors alive.
+
+### Milestone 3 Verification Gate
+
+- [x] Verify the `m3-events-1` rules contract, 13 production templates, two
+  interactive follow-ups, four delayed-effect/follow-up roots, per-template
+  cooldowns and phase weights, and centralized typed risk ranges.
+- [x] Verify participant-bound delayed effects record their source event and
+  choice, discard correctly when no original participant remains alive, and
+  preserve participant and global effect behavior.
+- [x] Run 89/89 unit tests, typecheck, lint, format, production build, 14/14
+  Chromium desktop/mobile Playwright checks, and 3/3 shortened-slice checks.
 
 ## Milestone 4: Complete Browser Experience
 
