@@ -1,5 +1,13 @@
 import type { GameConfig } from './types';
-export const RULES_VERSION = 'm2-proof-of-fun-1';
+import type { ProbabilityRange, RiskLevel } from './types';
+export const RULES_VERSION = 'm3-events-1';
+
+/** Central qualitative risk contract used by every probabilistic event effect. */
+export const RISK_PROBABILITY_RANGES: Readonly<Record<RiskLevel, ProbabilityRange>> = {
+  low: { min: 0.1, max: 0.3 },
+  moderate: { min: 0.31, max: 0.6 },
+  high: { min: 0.61, max: 0.9 },
+};
 export const DEFAULT_GAME_CONFIG: GameConfig = {
   seed: 'island-foundation',
   mode: 'production',
@@ -61,7 +69,9 @@ export const TUNING = {
   productionEventFirstDayFraction: 0.45,
   productionEventSpacingDays: 0.8,
   productionEventDeadlineDays: 2,
+  productionEventDecisionCap: 10,
   riskProbability: { low: 0.2, moderate: 0.45, high: 0.7 },
+  riskProbabilityRanges: RISK_PROBABILITY_RANGES,
 } as const;
 export function validateGameConfig(config: GameConfig): GameConfig {
   if (!Number.isInteger(config.fixedStepMs) || config.fixedStepMs !== 100)

@@ -6,7 +6,7 @@ test('shows the three-survivor production loop and pauses for its first decision
   test.setTimeout(14_000);
   await page.goto('/');
 
-  await expect(page.getByText('Milestone 2 · production experience')).toBeVisible();
+  await expect(page.getByText('Milestone 3 · final presentation')).toBeVisible();
   await expect(page.getByTestId('survivor-card')).toHaveCount(3);
   await expect(page.getByTestId('time-status')).toContainText('Day 1');
   await expect(page.getByText(/14 days/)).toBeVisible();
