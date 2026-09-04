@@ -5,7 +5,8 @@ current implementation path. Milestones 0 and 1 are complete. Milestone 2's
 software implementation and automated verification are complete; its required
 five-person blind-playtest gate remains open. Milestone 3's verified software
 scope is complete; final content playtesting and release validation remain open.
-Milestone 4 implementation is active on `feature/milestone-4-browser-experience`.
+Milestone 4 is complete. Milestone 5 implementation is active on
+`feature/milestone-5-balance-release-candidate`.
 
 ## Current Baseline
 
@@ -249,6 +250,9 @@ milestone completes and tunes the final content pool.
 
 ## Milestone 5: Balance And Release Candidate
 
+- [ ] Present hunger and thirst as remaining percentages that decrease from
+  100, while preserving the authoritative internal need-pressure model.
+- [ ] Replace player-facing raw step/tick durations with 12-hour clock time.
 - [x] Implement the versioned deterministic M2 conservative headless policy.
 - [ ] Add resource-greedy and deterministic random/fuzz policies using
   policy-owned RNG streams.
