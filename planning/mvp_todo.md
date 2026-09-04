@@ -250,13 +250,13 @@ milestone completes and tunes the final content pool.
 
 ## Milestone 5: Balance And Release Candidate
 
-- [ ] Present hunger and thirst as remaining percentages that decrease from
+- [x] Present hunger and thirst as remaining percentages that decrease from
   100, while preserving the authoritative internal need-pressure model.
-- [ ] Replace player-facing raw step/tick durations with 12-hour clock time.
+- [x] Replace player-facing raw step/tick durations with 12-hour clock time.
 - [x] Implement the versioned deterministic M2 conservative headless policy.
-- [ ] Add resource-greedy and deterministic random/fuzz policies using
+- [x] Add resource-greedy and deterministic random/fuzz policies using
   policy-owned RNG streams.
-- [ ] Check in a stable manifest of 10,000 seeds and retain it across tuning
+- [x] Check in a stable manifest of 10,000 seeds and retain it across tuning
   changes.
 - [ ] Record game seed, policy ID/version/seed, and command trace for every
   invariant failure or failed run.
@@ -276,7 +276,7 @@ milestone completes and tunes the final content pool.
   Android Chrome environments.
 - [ ] Run the full manual matrix covering seeds, policies, risk styles, speeds,
   visibility, saves, endings, restart, mouse, keyboard, and touch.
-- [ ] Configure CI to run typecheck, lint, unit tests, production build, a small
+- [x] Configure CI to run typecheck, lint, unit tests, production build, a small
   deterministic invariant batch, and the short Playwright suite.
 - [ ] Re-run every MVP acceptance criterion and record release evidence.
 
@@ -294,7 +294,7 @@ support is still needed:
   server.
 - [x] Run `npm run test:e2e` after Chromium is installed to close the outstanding
   Milestone 0 browser gate.
-- [ ] Use a supported active Node.js LTS installation for repeatable development
+- [x] Use a supported active Node.js LTS installation for repeatable development
   and CI, and add a repository version pin (`.nvmrc`, Volta, or equivalent) once
   the team selects the exact LTS release.
 
