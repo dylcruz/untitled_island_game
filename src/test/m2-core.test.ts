@@ -174,9 +174,9 @@ describe('M2 deterministic production core', () => {
     expect(state.shelter.condition).toBeLessThan(100);
   });
 
-  it('keeps the three slice events and exposes exactly eight production templates spanning seven categories', () => {
+  it('keeps the three slice events and exposes the complete production template pool', () => {
     expect(EVENT_DEFINITIONS).toHaveLength(3);
-    expect(PRODUCTION_EVENT_DEFINITIONS).toHaveLength(8);
+    expect(PRODUCTION_EVENT_DEFINITIONS).toHaveLength(13);
     expect(new Set(PRODUCTION_EVENT_DEFINITIONS.map((value) => value.category))).toEqual(
       new Set(['resource', 'exploration', 'conflict', 'injury', 'shelter', 'trait', 'follow-up']),
     );
@@ -292,6 +292,9 @@ describe('M2 deterministic production core', () => {
       'interior-signal',
       'fallen-palm',
       'forager-instinct',
+      'freshwater-seep',
+      'driftwood-cache',
+      'night-watch',
     ];
     state.eventSchedule.nextEventTick = 2_341;
     state.metrics.lastDecisionTick = 1_200;
@@ -330,7 +333,11 @@ describe('M2 deterministic production core', () => {
     expect(state.clock.tick).toBe(8_400);
     expect(state.metrics.interactiveEventCount).toBeGreaterThanOrEqual(7);
     expect(state.metrics.maxDecisionGapTicks).toBeLessThanOrEqual(state.config.ticksPerDay * 2);
-    expect(state.choiceRecords.some((record) => record.eventId === 'signal-answer')).toBe(true);
+    expect(
+      state.choiceRecords.some(
+        (record) => record.eventId === 'signal-answer' || record.eventId === 'seep-follow-up',
+      ),
+    ).toBe(true);
     expect(JSON.parse(JSON.stringify(state))).toEqual(state);
   });
 
