@@ -1,0 +1,7 @@
+agent_docs/
+planning/
+.codex_workflow_hidden_resources/
+node_modules/
+dist/
+playwright-report/
+test-results/
