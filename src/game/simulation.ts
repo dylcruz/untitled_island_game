@@ -605,11 +605,10 @@ function targetsForEffect(
 ): SurvivorState[] {
   const living = state.survivors.filter((value) => value.alive);
   if (effect.targetScope === 'group') return living;
-  return participantIds
+  const participants = participantIds
     .map((id) => state.survivors.find((value) => value.id === id))
-    .filter((value): value is SurvivorState => !!value?.alive)
-    .slice(0, 1)
-    .concat(participantIds.length ? [] : living.slice(0, 1));
+    .filter((value): value is SurvivorState => !!value?.alive);
+  return participantIds.length ? participants : living.slice(0, 1);
 }
 
 function participantBoundEffect(
@@ -617,7 +616,13 @@ function participantBoundEffect(
   participantIds: readonly string[] | undefined,
 ): boolean {
   return (
-    effect.targetScope !== 'group' && participantIds !== undefined && participantIds.length > 0
+    (effect.kind === 'health' ||
+      effect.kind === 'need' ||
+      effect.kind === 'morale' ||
+      effect.kind === 'injury') &&
+    effect.targetScope !== 'group' &&
+    participantIds !== undefined &&
+    participantIds.length > 0
   );
 }
 

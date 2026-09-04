@@ -100,6 +100,89 @@ describe('M3 event content and authoritative scheduling', () => {
     );
   });
 
+  it('applies participant effects to every surviving original and preserves global effects', () => {
+    let state = createGame('m3-participant-targets');
+    clearTasks(state);
+    state.clock.tick = 100;
+    state.eventSchedule.nextEventTick = null;
+    state.status = 'decision';
+    state.activeEvent = {
+      id: 'night-watch',
+      activatedTick: state.clock.tick,
+      participantIds: state.survivors.slice(0, 2).map((survivor) => survivor.id),
+      chosenChoiceId: null,
+      result: null,
+    };
+    const beforeEnergy = state.survivors.map((survivor) => survivor.needs.energy);
+    state = applyCommand(state, {
+      type: 'select-event-choice',
+      eventId: 'night-watch',
+      choiceId: 'keep-watch',
+    }).state;
+    expect(
+      state.survivors
+        .slice(0, 2)
+        .map((survivor, index) => survivor.needs.energy - beforeEnergy[index]!),
+    ).toEqual([-8, -8]);
+
+    const participantIds = state.survivors.slice(0, 2).map((survivor) => survivor.id);
+    state.scheduledEffects = [
+      {
+        id: 'effect-global-resource',
+        dueTick: 101,
+        sourceEventId: 'night-watch',
+        sourceChoiceId: 'keep-watch',
+        participantIds,
+        effect: { kind: 'resource', target: 'food', amount: 2 },
+        description: 'A global resource effect resolves.',
+      },
+      {
+        id: 'effect-global-shelter',
+        dueTick: 101,
+        sourceEventId: 'night-watch',
+        sourceChoiceId: 'keep-watch',
+        participantIds,
+        effect: { kind: 'shelter', amount: 3 },
+        description: 'A global shelter effect resolves.',
+      },
+    ];
+    state.status = 'running';
+    state.activeEvent = null;
+    state.survivors.slice(0, 2).forEach((survivor) => {
+      survivor.alive = false;
+      survivor.needs.health = 0;
+    });
+    const beforeFood = state.resources.food;
+    const beforeShelter = state.shelter.condition;
+    state = advanceStep(state);
+    expect(state.resources.food).toBe(beforeFood + 2);
+    expect(state.shelter.condition).toBeGreaterThan(beforeShelter + 2.9);
+    expect(state.history.some((entry) => entry.message.includes('discarded'))).toBe(false);
+  });
+
+  it('rejects scheduled effect provenance without the matching recorded choice', () => {
+    let state = createGame('m3-fabricated-provenance');
+    clearTasks(state);
+    state.clock.tick = 100;
+    state.eventSchedule.nextEventTick = null;
+    state.status = 'decision';
+    state.resources.materials = 1;
+    state.activeEvent = {
+      id: 'storm-front',
+      activatedTick: state.clock.tick,
+      participantIds: [state.survivors[0]!.id],
+      chosenChoiceId: null,
+      result: null,
+    };
+    state = applyCommand(state, {
+      type: 'select-event-choice',
+      eventId: 'storm-front',
+      choiceId: 'reinforce-shelter',
+    }).state;
+    state.choiceRecords = [];
+    expect(parseSaveEnvelope(serializeSave(state)).ok).toBe(false);
+  });
+
   it('round trips the expanded schedule and rules state as plain JSON', () => {
     const state = createGame('m3-save');
     const raw = serializeSave(state, '2026-09-03T00:00:00.000Z');
