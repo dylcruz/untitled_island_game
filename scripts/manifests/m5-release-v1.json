@@ -1,0 +1,11 @@
+{
+  "id": "m5-release-v1",
+  "version": "1",
+  "algorithm": "prefix-plus-one-based-zero-padded-decimal-v1",
+  "prefix": "m5-release-v1-",
+  "count": 10000,
+  "width": 5,
+  "firstSeed": "m5-release-v1-00001",
+  "lastSeed": "m5-release-v1-10000",
+  "sha256": "b6cdc7dcafc1db4621f7ca0d8d7d96b9946afa5cf565471f77ac8abd254e5914"
+}

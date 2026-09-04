@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { EVENT_BY_ID } from '../src/game/events';
 import { advanceStep, applyCommand, createGame } from '../src/game/simulation';
 import { serializeSave } from '../src/persistence/saveSchema';
+import { formatGameTimestamp } from '../src/presentation/gameTime';
 
 function savedEventResult(seed: string): { raw: string; step: number } {
   let state = createGame(seed);
@@ -114,7 +115,10 @@ test('a saved decision reopens paused at its exact state', async ({ page }) => {
   const savedStep = state.clock.tick;
   await page.getByTestId('resume-saved').click();
   await expect(page.getByRole('dialog')).toBeVisible();
-  await expect(page.getByTestId('time-status')).toContainText(`step ${savedStep} of`);
+  await expect(page.getByTestId('time-status')).toContainText(
+    formatGameTimestamp(savedStep, 600, 8_400),
+  );
+  await expect(page.getByTestId('time-status')).not.toContainText(/\b(step|ticks?)\b/i);
   await expect(page.getByRole('dialog').getByRole('button').first()).toBeFocused();
   const pausedTime = await page.getByTestId('time-status').textContent();
   await page.waitForTimeout(200);
@@ -139,7 +143,10 @@ test('event-result checkpoints resume exactly and remain paused', async ({ page 
   await page.goto('/');
   await page.getByTestId('resume-saved').click();
   await expect(page.getByRole('heading', { name: 'Decision result' })).toBeVisible();
-  await expect(page.getByTestId('time-status')).toContainText(`step ${fixture.step} of`);
+  await expect(page.getByTestId('time-status')).toContainText(
+    formatGameTimestamp(fixture.step, 600, 8_400),
+  );
+  await expect(page.getByTestId('time-status')).not.toContainText(/\b(step|ticks?)\b/i);
   const savedTime = await page.getByTestId('time-status').textContent();
   await page.waitForTimeout(250);
   await expect(page.getByTestId('time-status')).toHaveText(savedTime ?? '');
@@ -247,8 +254,13 @@ test('visibility interruption checkpoints without catch-up drift', async ({ page
   await page.goto('/');
   await page.getByTestId('start-expedition').click();
   await page.getByRole('button', { name: '1x', exact: true }).click();
+  const initialTime = await page.getByTestId('time-status').textContent();
   await page.waitForTimeout(250);
-  await expect(page.getByTestId('time-status')).toContainText(/step [1-9]/, { timeout: 3_000 });
+  await expect(page.getByTestId('time-status')).not.toHaveText(initialTime ?? '', {
+    timeout: 3_000,
+  });
+  await expect(page.getByTestId('time-status')).toContainText(/Day 1 · \d{1,2}:\d{2} (AM|PM)/);
+  await expect(page.getByTestId('time-status')).not.toContainText(/\b(step|ticks?)\b/i);
   await page.evaluate(`(() => {
     let hidden = false;
     Object.defineProperty(document, 'hidden', { configurable: true, get: () => hidden });
@@ -264,7 +276,7 @@ test('visibility interruption checkpoints without catch-up drift', async ({ page
   ).resolves.toBe(true);
   await page.reload();
   await expect(page.locator('.resume-summary')).toContainText(
-    `step ${checkpointStep.toLocaleString()}`,
+    formatGameTimestamp(checkpointStep, 600, 8_400),
   );
 });
 

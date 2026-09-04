@@ -19,6 +19,7 @@ test('begin and accelerated speed advance the fixed-step clock', async ({ page }
   await page.getByTestId('start-expedition').click();
   await page.getByRole('button', { name: '8x' }).click();
   const timeStatus = page.getByTestId('time-status');
-  await expect(timeStatus).not.toHaveText(/step 0 of/);
+  await expect(timeStatus).toContainText(/Day 1 · \d{1,2}:\d{2} (AM|PM)/);
+  await expect(timeStatus).not.toContainText(/\b(step|ticks?)\b/i);
   await expect(page.getByRole('button', { name: '0x' })).toHaveAttribute('aria-pressed', 'false');
 });

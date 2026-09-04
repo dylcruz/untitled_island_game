@@ -10,7 +10,7 @@ test('shows the three-survivor production loop and pauses for its first decision
   await expect(page.getByText('Milestone 4 · expedition dashboard')).toBeVisible();
   await expect(page.getByTestId('survivor-card')).toHaveCount(3);
   await expect(page.getByTestId('time-status')).toContainText('Day 1');
-  await expect(page.getByText(/14 days/)).toBeVisible();
+  await expect(page.getByTestId('time-status')).toContainText('14 days to rescue');
   await expect(page.getByRole('heading', { name: 'Camp priority' })).toBeVisible();
 
   await page.getByTestId('priority-water').click();

@@ -22,6 +22,11 @@ import { SPEEDS } from './game/types';
 import { LocalSaveAdapter, SLICE_SAVE_STORAGE_KEY } from './persistence';
 import { GameController } from './runtime/GameController';
 import {
+  formatDurationTicks,
+  formatGameTimestamp,
+  remainingNeedPercent,
+} from './presentation/gameTime';
+import {
   CanvasRenderer,
   cosmeticVariantLabel,
   waypointLabel,
@@ -72,8 +77,16 @@ const COMMAND_REASON_LABELS: Record<CommandRejectionReason, string> = {
   'unknown-command': 'the command is not recognized',
 };
 
-function formatTaskReason(reason: NonNullable<SurvivorState['activeTask']>['reason']): string {
-  const entries = Object.entries(reason.params).map(([key, value]) => `${key}=${value}`);
+function formatTaskReason(
+  reason: NonNullable<SurvivorState['activeTask']>['reason'],
+  ticksPerDay: number,
+  rescueTick: number,
+): string {
+  const entries = Object.entries(reason.params).map(([key, value]) =>
+    key === 'selectedAtTick' && typeof value === 'number'
+      ? `selected at ${formatGameTimestamp(value, ticksPerDay, rescueTick)}`
+      : `${key}=${value}`,
+  );
   return `${reason.code}${entries.length ? ` (${entries.join(', ')})` : ''}`;
 }
 
@@ -231,25 +244,21 @@ function formatEffect(effect: EffectData): string {
   return `${effectTargetLabel(effect)} ${amount} · ${effectScopeLabel(effect)}${qualifier}`;
 }
 
-function formatHistoryTick(tick: number, ticksPerDay: number): string {
-  return `Day ${Math.floor(tick / ticksPerDay) + 1} · step ${tick.toLocaleString()}`;
+function formatHistoryTimestamp(tick: number, ticksPerDay: number, rescueTick: number): string {
+  return formatGameTimestamp(tick, ticksPerDay, rescueTick);
 }
 
 function needStatus(
   kind: keyof NeedState | 'morale',
   value: number,
 ): { label: string; tone: 'good' | 'watch' | 'critical' } {
-  const lowIsBad = kind === 'health' || kind === 'energy' || kind === 'morale';
-  if (lowIsBad) {
-    if (value <= (kind === 'health' ? 25 : kind === 'energy' ? 18 : 25))
-      return { label: 'Critical', tone: 'critical' };
-    if (value <= (kind === 'health' ? 50 : kind === 'energy' ? 35 : 45))
-      return { label: 'Low', tone: 'watch' };
-    return { label: 'Stable', tone: 'good' };
-  }
-  if (value >= 85) return { label: 'Critical', tone: 'critical' };
-  if (value >= 68) return { label: 'High', tone: 'watch' };
-  return { label: 'Good', tone: 'good' };
+  const criticalThreshold =
+    kind === 'health' ? 25 : kind === 'energy' ? 18 : kind === 'morale' ? 25 : 15;
+  const watchThreshold =
+    kind === 'health' ? 50 : kind === 'energy' ? 35 : kind === 'morale' ? 45 : 32;
+  if (value <= criticalThreshold) return { label: 'Critical', tone: 'critical' };
+  if (value <= watchThreshold) return { label: 'Low', tone: 'watch' };
+  return { label: 'Stable', tone: 'good' };
 }
 
 function resourceStatus(value: number): { label: string; tone: 'good' | 'watch' | 'critical' } {
@@ -268,22 +277,23 @@ function StatusMeter({
   kind: keyof NeedState | 'morale';
 }): ReactElement {
   const status = needStatus(kind, value);
-  const bounded = Math.max(0, Math.min(100, value));
+  const bounded = Math.max(0, Math.min(100, Math.round(value)));
+  const displayValue = `${formatValue(bounded)}${kind === 'hunger' || kind === 'thirst' ? '%' : ''}`;
   return (
     <div className={`status-meter status-meter-${status.tone}`}>
       <div className="status-meter-heading">
         <span>{label}</span>
         <strong>
-          {formatValue(value)} · {status.label}
+          {displayValue} · {status.label}
         </strong>
       </div>
       <meter
         min="0"
         max="100"
         value={bounded}
-        aria-label={`${label}: ${formatValue(value)}, ${status.label}`}
+        aria-label={`${label}: ${displayValue}, ${status.label}`}
       >
-        {formatValue(value)}
+        {displayValue}
       </meter>
     </div>
   );
@@ -337,19 +347,25 @@ function CanvasView({ snapshot }: { snapshot: GameSnapshot }): ReactElement {
 function SurvivorCard({
   survivor,
   portraitVariant,
+  ticksPerDay,
+  rescueTick,
 }: {
   survivor: SurvivorState;
   portraitVariant: number;
+  ticksPerDay: number;
+  rescueTick: number;
 }): ReactElement {
   const task = survivor.activeTask;
   const traitNames = survivor.traits.map((trait) => TRAIT_BY_ID[trait].name).join(' · ');
   const statusMessages: string[] = [];
+  const hungerRemaining = remainingNeedPercent(survivor.needs.hunger);
+  const thirstRemaining = remainingNeedPercent(survivor.needs.thirst);
   if (!survivor.alive) statusMessages.push('Lost from the expedition');
   else if (survivor.needs.health <= 25) statusMessages.push('Critical health');
   else if (survivor.needs.health <= 50) statusMessages.push('Health needs attention');
-  if (survivor.needs.thirst >= 85) statusMessages.push('Dehydrated');
-  else if (survivor.needs.thirst >= 68) statusMessages.push('Thirst is high');
-  if (survivor.needs.hunger >= 85) statusMessages.push('Starving');
+  if (thirstRemaining <= 15) statusMessages.push('Dehydrated');
+  else if (thirstRemaining <= 32) statusMessages.push('Thirst is running low');
+  if (hungerRemaining <= 15) statusMessages.push('Starving');
   if (survivor.needs.energy <= 18) statusMessages.push('Exhausted');
   if (survivor.injury)
     statusMessages.push(
@@ -391,8 +407,8 @@ function SurvivorCard({
       </p>
       <div className="need-grid" aria-label={`${survivor.name} condition meters`}>
         <StatusMeter label="Health" value={survivor.needs.health} kind="health" />
-        <StatusMeter label="Hunger" value={survivor.needs.hunger} kind="hunger" />
-        <StatusMeter label="Thirst" value={survivor.needs.thirst} kind="thirst" />
+        <StatusMeter label="Hunger" value={hungerRemaining} kind="hunger" />
+        <StatusMeter label="Thirst" value={thirstRemaining} kind="thirst" />
         <StatusMeter label="Energy" value={survivor.needs.energy} kind="energy" />
         <StatusMeter label="Morale" value={survivor.morale} kind="morale" />
       </div>
@@ -412,17 +428,21 @@ function SurvivorCard({
       <p className="survivor-task">
         <strong>Activity:</strong>{' '}
         {task
-          ? `${titleCase(task.kind)} · ${task.phase} at ${waypointLabel(task.destination)} (${task.remainingTicks} ticks)`
+          ? `${titleCase(task.kind)} · ${task.phase} at ${waypointLabel(task.destination)} (${formatDurationTicks(task.remainingTicks, ticksPerDay)} remaining)`
           : 'Idle at camp'}
       </p>
       <p className="survivor-task">
         <strong>Reason:</strong>{' '}
-        {task ? <code>{formatTaskReason(task.reason)}</code> : 'No active task'}
+        {task ? (
+          <code>{formatTaskReason(task.reason, ticksPerDay, rescueTick)}</code>
+        ) : (
+          'No active task'
+        )}
       </p>
       <p className="survivor-injury">
         <strong>Injury:</strong>{' '}
         {survivor.injury
-          ? `${survivor.injury.kind}, severity ${survivor.injury.severity} (${survivor.injury.recoveryTicksRemaining} ticks to recover)`
+          ? `${survivor.injury.kind}, severity ${survivor.injury.severity} (${formatDurationTicks(survivor.injury.recoveryTicksRemaining, ticksPerDay)} to recover)`
           : 'None'}
       </p>
     </li>
@@ -476,7 +496,7 @@ export default function App(): ReactElement {
           if (result.ok) {
             setSaveFailure(false);
             setSaveMessage(
-              `Checkpoint saved at day ${state.clock.day}, step ${state.clock.tick.toLocaleString()}.`,
+              `Checkpoint saved at ${formatGameTimestamp(state.clock.tick, state.config.ticksPerDay, state.config.rescueTick)}.`,
             );
           } else {
             setSaveFailure(true);
@@ -688,6 +708,7 @@ export default function App(): ReactElement {
   const event = snapshot.activeEvent ? EVENT_BY_ID[snapshot.activeEvent.id] : null;
   const activePriority = PRIORITY_DETAILS[snapshot.campPolicy.priority];
   const priorityChangeUsed = snapshot.campPolicy.lastChangedDay === snapshot.clock.day;
+  const rescueDay = Math.ceil(snapshot.config.rescueTick / snapshot.config.ticksPerDay);
   const endingSummary =
     snapshot.status === 'victory' || snapshot.status === 'defeat'
       ? deriveEndingSummary(snapshot)
@@ -815,8 +836,13 @@ export default function App(): ReactElement {
             <section className="resume-summary" aria-label="Saved expedition summary">
               <h3>Saved expedition ready</h3>
               <p>
-                Seed <strong>{initialState.seed}</strong> · day {initialState.clock.day} · step{' '}
-                {initialState.clock.tick.toLocaleString()} · status {initialState.status}.
+                Seed <strong>{initialState.seed}</strong> ·{' '}
+                {formatGameTimestamp(
+                  initialState.clock.tick,
+                  initialState.config.ticksPerDay,
+                  initialState.config.rescueTick,
+                )}{' '}
+                · status {initialState.status}.
               </p>
               <button type="button" onClick={resumeSaved} data-testid="resume-saved">
                 Resume saved expedition
@@ -925,10 +951,13 @@ export default function App(): ReactElement {
             </strong>
           </div>
           <p data-testid="time-status">
-            Day {time.day} · {time.phase} · run phase {time.runPhase} · step{' '}
-            {snapshot.clock.tick.toLocaleString()} of {snapshot.config.rescueTick.toLocaleString()}
-            {' · '}
-            {time.rescueTicksRemaining.toLocaleString()} ticks to rescue
+            {formatGameTimestamp(
+              snapshot.clock.tick,
+              snapshot.config.ticksPerDay,
+              snapshot.config.rescueTick,
+            )}{' '}
+            · phase {time.phase} · run phase {time.runPhase} ·{' '}
+            {formatDurationTicks(time.rescueTicksRemaining, snapshot.config.ticksPerDay)} to rescue
           </p>
           <div className="button-row">
             <button
@@ -1080,7 +1109,9 @@ export default function App(): ReactElement {
                 </p>
                 <p className="priority-availability" id="priority-availability">
                   {priorityChangeUsed
-                    ? `Today's change is used. Another change is available at dawn on day ${snapshot.clock.day + 1}.`
+                    ? snapshot.clock.day >= rescueDay
+                      ? "Today's change is used. No further change is available after rescue."
+                      : `Today's change is used. Another change is available at dawn on day ${snapshot.clock.day + 1}.`
                     : 'One priority change remains available today while the simulation is running.'}
                 </p>
                 <div className="priority-grid" role="group" aria-label="Camp priorities">
@@ -1121,8 +1152,8 @@ export default function App(): ReactElement {
                       </small>
                       <small>
                         Health {formatValue(survivor.needs.health)} · hunger{' '}
-                        {formatValue(survivor.needs.hunger)} · thirst{' '}
-                        {formatValue(survivor.needs.thirst)} · energy{' '}
+                        {formatValue(remainingNeedPercent(survivor.needs.hunger))}% · thirst{' '}
+                        {formatValue(remainingNeedPercent(survivor.needs.thirst))}% · energy{' '}
                         {formatValue(survivor.needs.energy)}
                       </small>
                       <small>
@@ -1162,6 +1193,8 @@ export default function App(): ReactElement {
                     key={survivor.id}
                     survivor={survivor}
                     portraitVariant={portraitVariants[index] ?? index % PORTRAIT_VARIANTS.length}
+                    ticksPerDay={snapshot.config.ticksPerDay}
+                    rescueTick={snapshot.config.rescueTick}
                   />
                 ))}
               </ul>
@@ -1187,7 +1220,11 @@ export default function App(): ReactElement {
                       >
                         <span className="history-meta">
                           {HISTORY_KIND_LABELS[entry.kind]} ·{' '}
-                          {formatHistoryTick(entry.tick, snapshot.config.ticksPerDay)}
+                          {formatHistoryTimestamp(
+                            entry.tick,
+                            snapshot.config.ticksPerDay,
+                            snapshot.config.rescueTick,
+                          )}
                         </span>
                         <span>{entry.message}</span>
                       </article>
@@ -1272,8 +1309,12 @@ export default function App(): ReactElement {
                   </ul>
                   {choice.delayedEffect && (
                     <p className="choice-follow-up">
-                      Follow-up in {choice.delayedEffect.delayTicks} ticks:{' '}
-                      {choice.delayedEffect.description}
+                      Follow-up in{' '}
+                      {formatDurationTicks(
+                        choice.delayedEffect.delayTicks,
+                        snapshot.config.ticksPerDay,
+                      )}
+                      : {choice.delayedEffect.description}
                     </p>
                   )}
                   {choice.followUpEventId && (
@@ -1326,9 +1367,12 @@ export default function App(): ReactElement {
               </ul>
               {scheduledForChoice ? (
                 <p className="choice-follow-up">
-                  Delayed consequence scheduled for{' '}
-                  {formatHistoryTick(scheduledForChoice.dueTick, snapshot.config.ticksPerDay)}:{' '}
-                  {scheduledForChoice.description}
+                  Delayed consequence in{' '}
+                  {formatDurationTicks(
+                    scheduledForChoice.dueTick - snapshot.clock.tick,
+                    snapshot.config.ticksPerDay,
+                  )}
+                  : {scheduledForChoice.description}
                 </p>
               ) : selectedChoice.delayedEffect ? (
                 <p className="choice-follow-up">
@@ -1383,7 +1427,7 @@ export default function App(): ReactElement {
             <p>
               {isSlice
                 ? endingSummary.result === 'victory'
-                  ? 'The survivor held out until the exact rescue tick.'
+                  ? 'The survivor held out until rescue.'
                   : 'The technical slice ends in defeat.'
                 : `${endingSummary.survivors.filter((survivor) => survivor.fate === 'rescued').length} of ${endingSummary.survivors.length} survivors reached rescue.`}
             </p>
@@ -1440,7 +1484,12 @@ export default function App(): ReactElement {
                   </div>
                   <div>
                     <dt>Max decision gap</dt>
-                    <dd>{snapshot.metrics.maxDecisionGapTicks} ticks</dd>
+                    <dd>
+                      {formatDurationTicks(
+                        snapshot.metrics.maxDecisionGapTicks,
+                        snapshot.config.ticksPerDay,
+                      )}
+                    </dd>
                   </div>
                   <div>
                     <dt>Active time by speed</dt>
