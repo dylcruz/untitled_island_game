@@ -1,6 +1,6 @@
 import type { GameConfig } from './types';
 import type { ProbabilityRange, RiskLevel } from './types';
-export const RULES_VERSION = 'm3-events-1';
+export const RULES_VERSION = 'm5-balance-1';
 
 /** Central qualitative risk contract used by every probabilistic event effect. */
 export const RISK_PROBABILITY_RANGES: Readonly<Record<RiskLevel, ProbabilityRange>> = {
@@ -58,9 +58,9 @@ export const TUNING = {
     targetStockPerSurvivor: { water: 3.5, food: 2.8 },
     policyScores: {
       balanced: { water: 4, food: 4, materials: 2, repair: 3, rest: 0 },
-      water: { water: 14, food: -2, materials: -3, repair: -3, rest: -4 },
-      food: { water: -2, food: 14, materials: -3, repair: -3, rest: -4 },
-      build: { water: -3, food: -3, materials: 12, repair: 16, rest: -4 },
+      water: { water: 14, food: -2, materials: -3, repair: -3, rest: 1 },
+      food: { water: -2, food: 14, materials: -3, repair: -3, rest: 1 },
+      build: { water: -3, food: -3, materials: 12, repair: 16, rest: 1 },
       recover: { water: -5, food: -5, materials: -6, repair: -5, rest: 20 },
     },
   },
@@ -72,6 +72,16 @@ export const TUNING = {
   productionEventDecisionCap: 10,
   riskProbability: { low: 0.2, moderate: 0.45, high: 0.7 },
   riskProbabilityRanges: RISK_PROBABILITY_RANGES,
+  /**
+   * Production balance rates are kept separate from the internal slice rates.
+   * The shortened slice uses a different tick scale and remains a regression
+   * path for the original M1 economy.
+   */
+  production: {
+    dawnReplenishment: { water: 0.55, forage: 0.55, forest: 1 },
+    needRates: { hunger: 0.37, thirst: 0.47, energy: 0.12 },
+    healthDamage: { hunger: 0.5, thirst: 0.8, exhaustion: 0.1 },
+  },
 } as const;
 export function validateGameConfig(config: GameConfig): GameConfig {
   if (!Number.isInteger(config.fixedStepMs) || config.fixedStepMs !== 100)

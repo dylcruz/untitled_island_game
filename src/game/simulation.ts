@@ -542,21 +542,36 @@ function completeTask(state: GameState, survivor: SurvivorState): void {
   releaseTask(state, survivor);
 }
 
+interface EconomyRates {
+  dawnReplenishment: { water: number; forage: number; forest: number };
+  needRates: { hunger: number; thirst: number; energy: number };
+  healthDamage: { hunger: number; thirst: number; exhaustion: number };
+}
+
+function economyRates(state: Pick<GameState, 'config'>): EconomyRates {
+  if (state.config.mode === 'production') return TUNING.production;
+  return {
+    dawnReplenishment: TUNING.dawnReplenishment,
+    needRates: TUNING.needRates,
+    healthDamage: TUNING.healthDamage,
+  };
+}
+
 function advanceTask(state: GameState, survivor: SurvivorState): void {
   const task = survivor.activeTask;
   if (!task) return;
   survivor.previousPosition = { ...survivor.position };
   if (task.phase === 'travel') {
-    survivor.progressTicks += 1;
+    survivor.progressTicks = Math.min(state.config.movementTicks, survivor.progressTicks + 1);
     const from = waypointPosition(survivor.currentWaypoint);
     const to = waypointPosition(task.destination);
     const travelModifier =
       productivityMultiplier(survivor.traits, 'travel') *
       (survivor.injury?.productivityModifier ?? 1);
-    const fraction = Math.min(
-      1,
-      (survivor.progressTicks * travelModifier) / state.config.movementTicks,
-    );
+    const fraction =
+      survivor.progressTicks === state.config.movementTicks
+        ? 1
+        : Math.min(1, (survivor.progressTicks * travelModifier) / state.config.movementTicks);
     survivor.position = {
       x: from.x + (to.x - from.x) * fraction,
       y: from.y + (to.y - from.y) * fraction,
@@ -587,15 +602,19 @@ function invalidateReservations(state: GameState): void {
       );
       if (survivor) releaseTask(state, survivor);
       else state.reservations = state.reservations.filter((value) => value.id !== reservation.id);
+      claimed -= reservation.expectedYield;
     }
   }
-  for (const reservation of state.reservations.filter((value) => value.kind === 'materials'))
-    if ((reservation.reservedAmount ?? 0) > state.resources.materials) {
-      const survivor = state.survivors.find(
-        (value) => value.activeTask?.reservationId === reservation.id,
-      );
-      if (survivor) releaseTask(state, survivor);
-    }
+  let claimedMaterials = 0;
+  for (const reservation of state.reservations.filter((value) => value.kind === 'materials')) {
+    claimedMaterials += reservation.reservedAmount ?? 0;
+    if (claimedMaterials <= state.resources.materials) continue;
+    const survivor = state.survivors.find(
+      (value) => value.activeTask?.reservationId === reservation.id,
+    );
+    if (survivor) releaseTask(state, survivor);
+    claimedMaterials -= reservation.reservedAmount ?? 0;
+  }
 }
 
 function targetsForEffect(
@@ -895,7 +914,7 @@ function activateEvent(state: GameState): void {
 }
 
 function replenishAtDawn(state: GameState): void {
-  for (const [id, amount] of Object.entries(TUNING.dawnReplenishment) as [
+  for (const [id, amount] of Object.entries(economyRates(state).dawnReplenishment) as [
     Exclude<SourceId, 'wreckage'>,
     number,
   ][]) {
@@ -972,6 +991,7 @@ export function advanceStep(state: GameState): GameState {
     replenishAtDawn(next);
   }
   const rateScale = 120 / next.config.ticksPerDay;
+  const rates = economyRates(next);
   next.shelter.condition = clamp(
     next.shelter.condition - TUNING.shelter.decayPerDay / next.config.ticksPerDay,
     0,
@@ -980,12 +1000,12 @@ export function advanceStep(state: GameState): GameState {
   invalidateReservations(next);
   for (const survivor of next.survivors) {
     if (!survivor.alive) continue;
-    survivor.needs.hunger = clamp(survivor.needs.hunger + TUNING.needRates.hunger * rateScale);
-    survivor.needs.thirst = clamp(survivor.needs.thirst + TUNING.needRates.thirst * rateScale);
+    survivor.needs.hunger = clamp(survivor.needs.hunger + rates.needRates.hunger * rateScale);
+    survivor.needs.thirst = clamp(survivor.needs.thirst + rates.needRates.thirst * rateScale);
     if (survivor.activeTask?.kind !== 'sleep')
       survivor.needs.energy = clamp(
         survivor.needs.energy -
-          TUNING.needRates.energy * rateScale * (survivor.traits.includes('tireless') ? 0.75 : 1),
+          rates.needRates.energy * rateScale * (survivor.traits.includes('tireless') ? 0.75 : 1),
       );
     const moraleLoss =
       (survivor.injury ? TUNING.morale.injuryLoss * survivor.injury.severity : 0) +
@@ -1038,11 +1058,11 @@ export function advanceStep(state: GameState): GameState {
     if (!survivor.alive) continue;
     let damage = 0;
     if (survivor.needs.hunger >= TUNING.critical.hunger)
-      damage += TUNING.healthDamage.hunger * rateScale;
+      damage += rates.healthDamage.hunger * rateScale;
     if (survivor.needs.thirst >= TUNING.critical.thirst)
-      damage += TUNING.healthDamage.thirst * rateScale;
+      damage += rates.healthDamage.thirst * rateScale;
     if (survivor.needs.energy <= TUNING.critical.energy)
-      damage += TUNING.healthDamage.exhaustion * rateScale;
+      damage += rates.healthDamage.exhaustion * rateScale;
     survivor.needs.health = clamp(survivor.needs.health - damage);
     if (survivor.needs.health <= 0) {
       survivor.alive = false;
