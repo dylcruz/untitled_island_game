@@ -13,7 +13,11 @@
     "test": "vitest",
     "test:watch": "vitest --watch",
     "test:e2e": "playwright test",
-    "simulate": "tsx scripts/simulate.ts"
+    "test:e2e:short": "playwright test e2e/m1-slice.spec.ts e2e/m2-production.spec.ts",
+    "simulate": "tsx scripts/simulate.ts",
+    "simulate:ci": "tsx scripts/simulate.ts --batch=matrix --runs=1 --seed=ci",
+    "simulate:release": "tsx scripts/simulate.ts --batch=release",
+    "simulate:sensitivity": "tsx scripts/simulate.ts --batch=sensitivity"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
