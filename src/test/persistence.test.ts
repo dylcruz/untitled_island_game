@@ -264,6 +264,7 @@ describe('versioned local save boundary', () => {
           id: 'bad-event',
           dueTick: 1,
           sourceEventId: 'supply-cache' as never,
+          sourceChoiceId: 'force-open',
           effect: { kind: 'health', amount: -1 },
           description: 'bad source',
         });
