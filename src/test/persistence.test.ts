@@ -3,10 +3,12 @@ import { applyCommand, createGame } from '../game/simulation';
 import type { GameState } from '../game/types';
 import {
   LocalSaveAdapter,
+  MAX_SAVE_BYTES,
   SAVE_SCHEMA_VERSION,
   SAVE_STORAGE_KEY,
   SLICE_SAVE_STORAGE_KEY,
   createSaveEnvelope,
+  isSavePayloadWithinLimit,
   parseSaveEnvelope,
   serializeSave,
   type SaveEnvelope,
@@ -64,6 +66,31 @@ describe('versioned local save boundary', () => {
     expect(result.state).toEqual(state);
     expect(result.state.config).toEqual(state.config);
     expect(result.state.rngStates).toEqual(state.rngStates);
+  });
+
+  it('accounts for UTF-8 bytes and accepts exactly the payload limit', () => {
+    expect(isSavePayloadWithinLimit('a'.repeat(MAX_SAVE_BYTES))).toBe(true);
+    expect(isSavePayloadWithinLimit('a'.repeat(MAX_SAVE_BYTES + 1))).toBe(false);
+    expect(isSavePayloadWithinLimit(`${'a'.repeat(MAX_SAVE_BYTES - 4)}🙂`)).toBe(true);
+    expect(isSavePayloadWithinLimit(`${'a'.repeat(MAX_SAVE_BYTES - 3)}🙂`)).toBe(false);
+  });
+
+  it('rejects an oversized storage payload before attempting to parse it', () => {
+    const oversizedMalformed = `{${'x'.repeat(MAX_SAVE_BYTES)}}`;
+    expect(parseSaveEnvelope(oversizedMalformed)).toEqual({
+      ok: false,
+      reason: 'payload-too-large',
+    });
+
+    const storage = {
+      getItem: (): string => oversizedMalformed,
+      setItem: (): void => undefined,
+      removeItem: (): void => undefined,
+    };
+    expect(new LocalSaveAdapter({ storage }).load()).toEqual({
+      ok: false,
+      reason: 'payload-too-large',
+    });
   });
 
   it('round trips the internal slice under its separate save key', () => {
@@ -424,5 +451,27 @@ describe('versioned local save boundary', () => {
     };
     const adapter = new LocalSaveAdapter({ storage: quotaStorage });
     expect(adapter.save(state)).toEqual({ ok: false, reason: 'storage-write-failed' });
+  });
+
+  it('does not write a newly serialized state over the payload limit', () => {
+    const state = createGame('oversized-save');
+    state.history.push({
+      id: 'oversized-history',
+      tick: 0,
+      kind: 'event',
+      message: 'x'.repeat(MAX_SAVE_BYTES),
+    });
+    let writes = 0;
+    const storage = {
+      getItem: (): string | null => null,
+      setItem: (): void => {
+        writes += 1;
+      },
+      removeItem: (): void => undefined,
+    };
+    const adapter = new LocalSaveAdapter({ storage });
+
+    expect(adapter.save(state)).toEqual({ ok: false, reason: 'payload-too-large' });
+    expect(writes).toBe(0);
   });
 });

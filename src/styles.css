@@ -52,7 +52,7 @@ button:disabled {
 
 .app-shell {
   margin: 0 auto;
-  max-width: 1160px;
+  max-width: none;
   padding: clamp(1.25rem, 3vw, 3rem);
 }
 
@@ -106,6 +106,137 @@ h3 {
   display: grid;
   gap: 1rem;
   grid-template-columns: minmax(0, 1.55fr) minmax(300px, 0.75fr);
+}
+
+.production-overview {
+  min-width: 0;
+}
+
+.announcement {
+  background: #fff9e9;
+  border-left: 3px solid #e7af45;
+  color: #6e5420;
+  font-size: 0.86rem;
+  margin: 0 0 1rem;
+  padding: 0.55rem 0.7rem;
+}
+
+.save-status {
+  color: #4b6863;
+  font-size: 0.78rem;
+  margin: 0.85rem 0 0;
+}
+
+.setup-shell {
+  max-width: 76rem;
+}
+
+.setup-card {
+  background: #fff;
+  border: 1px solid rgba(40, 99, 93, 0.2);
+  border-radius: 1.1rem;
+  box-shadow: 0 1rem 2.5rem rgba(35, 84, 77, 0.1);
+  max-width: 58rem;
+  padding: clamp(1.15rem, 3vw, 2rem);
+}
+
+.setup-card > p:not(.event-kicker),
+.setup-guidance p,
+.resume-summary p,
+.save-recovery p {
+  color: #4b6863;
+}
+
+.setup-guidance {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 1.25rem 0;
+}
+
+.setup-guidance article {
+  background: #edf6f2;
+  border-radius: 0.55rem;
+  padding: 0.8rem;
+}
+
+.setup-guidance h3 {
+  margin-bottom: 0.25rem;
+}
+
+.setup-guidance p {
+  font-size: 0.84rem;
+  margin: 0;
+}
+
+.seed-field {
+  border-top: 1px solid rgba(40, 99, 93, 0.14);
+  padding-top: 1rem;
+}
+
+.seed-field label {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  margin-bottom: 0.45rem;
+  text-transform: uppercase;
+}
+
+.seed-controls {
+  align-items: stretch;
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+}
+
+.seed-controls input {
+  border: 1px solid #28635d;
+  border-radius: 0.6rem;
+  color: #173c3a;
+  font: inherit;
+  min-width: 0;
+  padding: 0.55rem 0.7rem;
+}
+
+.seed-controls input:focus-visible {
+  outline: 3px solid #e7af45;
+  outline-offset: 2px;
+}
+
+.seed-feedback {
+  color: #28635d;
+  font-size: 0.78rem;
+  margin: 0.45rem 0 0;
+}
+
+.resume-summary,
+.save-recovery {
+  border-left: 3px solid #28635d;
+  margin-top: 1.25rem;
+  padding: 0.15rem 0 0.15rem 0.75rem;
+}
+
+.save-recovery {
+  border-left-color: #a04e38;
+}
+
+.resume-summary h3,
+.save-recovery strong {
+  display: block;
+  margin-bottom: 0.35rem;
+}
+
+.resume-summary p,
+.save-recovery p {
+  font-size: 0.84rem;
+  margin-bottom: 0.7rem;
+}
+
+.setup-actions {
+  border-top: 1px solid rgba(40, 99, 93, 0.14);
+  margin-top: 1.25rem;
+  padding-top: 1rem;
 }
 
 .map-card,
@@ -642,6 +773,36 @@ code {
   z-index: 5;
 }
 
+.modal-backdrop {
+  background: rgba(23, 60, 58, 0.38);
+  inset: 0;
+  position: fixed;
+  z-index: 4;
+}
+
+.confirm-dialog {
+  background: #fff9e9;
+  border: 2px solid #b87e20;
+  border-radius: 1rem;
+  box-shadow: 0 1rem 3rem rgba(23, 60, 58, 0.25);
+  inset: 50% auto auto 50%;
+  max-width: min(32rem, calc(100vw - 2rem));
+  padding: 1.4rem;
+  position: fixed;
+  transform: translate(-50%, -50%);
+  width: 100%;
+}
+
+.confirm-dialog p:not(.event-kicker) {
+  color: #4b6863;
+}
+
+.dialog-actions {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: 1fr 1fr;
+}
+
 .event-panel > p:not(.event-kicker),
 .ending > p {
   color: #4b6863;
@@ -821,6 +982,239 @@ code {
   padding: 0.7rem 0.85rem;
 }
 
+@media (min-width: 1360px) {
+  .app-header {
+    margin-bottom: 0.75rem;
+    max-width: min(64rem, 100%);
+  }
+
+  .app-header .lede {
+    font-size: 1rem;
+    line-height: 1.35;
+  }
+
+  .app-shell {
+    padding: 1.15rem 1.25rem 0;
+  }
+
+  .app-header h1 {
+    font-size: clamp(2.2rem, 4vw, 3.8rem);
+  }
+
+  .production-layout {
+    grid-template-columns: minmax(320px, 0.6fr) minmax(390px, 1fr) minmax(670px, 1.7fr);
+  }
+
+  .production-layout .island-canvas {
+    height: clamp(340px, 26vw, 400px);
+    min-height: 320px;
+  }
+
+  .production-layout .control-card {
+    display: grid;
+    gap: 0 0.65rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 0.8rem;
+  }
+
+  .production-layout .control-card > .status-row,
+  .production-layout .control-card > p,
+  .production-layout .control-card > .button-row,
+  .production-layout .control-card > fieldset,
+  .production-layout .control-card > .assistive-note {
+    grid-column: 1 / -1;
+  }
+
+  .production-layout .control-card > .stats {
+    grid-column: auto;
+    margin-top: 0.35rem;
+    padding-top: 0.35rem;
+  }
+
+  .production-layout .control-card > .stats:first-of-type {
+    display: block;
+    grid-column: 1;
+  }
+
+  .production-layout .control-card > .stats:first-of-type .shelter-meter {
+    margin-top: 0.6rem;
+  }
+
+  .production-layout .control-card > .stats + .stats {
+    grid-column: 2;
+  }
+
+  .production-layout .control-card > .priority-panel {
+    grid-column: 1 / -1;
+    margin-top: 0.35rem;
+    padding-top: 0.35rem;
+  }
+
+  .production-layout .control-card fieldset {
+    margin-bottom: 0.9rem;
+  }
+
+  .production-layout .control-card > .stats:first-of-type {
+    align-items: start;
+    display: grid;
+    gap: 0 0.6rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .production-layout .control-card > .stats:first-of-type h2 {
+    grid-column: 1 / -1;
+  }
+
+  .production-layout .control-card > .stats:first-of-type dl {
+    grid-column: 1;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin: 0;
+  }
+
+  .production-layout .control-card .stats dt {
+    font-size: 0.66rem;
+  }
+
+  .production-layout .control-card .stats dd {
+    font-size: 0.72rem;
+  }
+
+  .production-layout .control-card > .stats:first-of-type .shelter-meter {
+    grid-column: 2;
+    margin: 0;
+  }
+
+  .production-layout .control-card .stats dl {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin-bottom: 0.55rem;
+  }
+
+  .production-layout .control-card > .stats + .stats dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .production-layout .control-card .stats dl div {
+    padding: 0.2rem 0.3rem;
+  }
+
+  .production-layout .control-card .priority-panel p {
+    font-size: 0.74rem;
+    line-height: 1.25;
+    margin-bottom: 0.45rem;
+  }
+
+  .production-layout .control-card .priority-grid button {
+    font-size: 0.76rem;
+    line-height: 1.15;
+    padding-left: 0.2rem;
+    padding-right: 0.2rem;
+  }
+
+  .production-layout .control-card .priority-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .production-layout .control-card .priority-grid button:last-child {
+    grid-column: auto;
+  }
+
+  .production-overview {
+    min-height: 0;
+  }
+
+  .production-overview .survivor-grid {
+    gap: 0.45rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .production-overview .survivor-section {
+    border-top: 0;
+    margin-top: 0;
+    padding-top: 0;
+  }
+
+  .production-overview .survivor-card {
+    padding: 0.58rem;
+  }
+
+  .production-overview .survivor-heading {
+    gap: 0.35rem;
+  }
+
+  .production-overview .survivor-portrait {
+    flex-basis: 2.2rem;
+    height: 2.2rem;
+    width: 2.2rem;
+  }
+
+  .production-overview .survivor-identity,
+  .production-overview .survivor-traits,
+  .production-overview .survivor-route,
+  .production-overview .survivor-task,
+  .production-overview .survivor-injury,
+  .production-overview .survivor-condition {
+    font-size: 0.7rem;
+  }
+
+  .production-overview .need-grid {
+    gap: 0.25rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .production-overview .need-grid div {
+    padding: 0.3rem 0.35rem;
+  }
+
+  .production-overview .status-meter {
+    padding: 0.3rem 0.35rem;
+  }
+
+  .production-overview .status-meter-heading span,
+  .production-overview .status-meter-heading strong {
+    font-size: 0.68rem;
+  }
+
+  .production-overview .survivor-traits,
+  .production-overview .survivor-route,
+  .production-overview .survivor-task,
+  .production-overview .survivor-injury,
+  .production-overview .survivor-condition {
+    display: inline;
+    line-height: 1.2;
+    margin-top: 0.25rem;
+    margin-right: 0.45rem;
+  }
+
+  .production-overview .history {
+    margin-top: 0.7rem;
+    padding-top: 0.6rem;
+  }
+
+  .production-overview .history-log {
+    column-gap: 0.75rem;
+    gap: 0.25rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    font-size: 0.75rem;
+    overflow-wrap: anywhere;
+  }
+
+  .production-overview .history-entry {
+    line-height: 1.25;
+  }
+
+  .production-overview .history-meta {
+    font-size: 0.64rem;
+    display: inline;
+    margin-right: 0.25rem;
+  }
+
+  .production-layout .assistive-note {
+    font-size: 0.7rem;
+    line-height: 1.25;
+    margin-top: 0;
+  }
+}
+
 @media (max-width: 760px) {
   .game-layout {
     grid-template-columns: 1fr;
@@ -829,6 +1223,10 @@ code {
   .island-canvas {
     height: 70vw;
     min-height: 280px;
+  }
+
+  .production-overview {
+    grid-column: 1;
   }
 }
 
@@ -847,6 +1245,16 @@ code {
 
   .button-row {
     grid-template-columns: 1fr;
+  }
+
+  .setup-guidance,
+  .seed-controls,
+  .dialog-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .seed-controls button {
+    width: 100%;
   }
 
   .priority-grid {

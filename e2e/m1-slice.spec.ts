@@ -21,4 +21,12 @@ test('pauses for decisions, shows results, and completes the shortened slice', a
 
   await expect(page.getByRole('heading', { name: 'Rescue has arrived' })).toBeVisible();
   await expect(page.getByTestId('time-status')).toContainText('step 360 of 360');
+  const ending = page.getByRole('dialog');
+  const acknowledgement = page.getByTestId('acknowledge-ending');
+  await expect(ending).toBeVisible();
+  await expect(acknowledgement).toBeFocused();
+  await acknowledgement.press('Shift+Tab');
+  await expect(ending.getByRole('button', { name: 'Restart with randomized seed' })).toBeFocused();
+  await acknowledgement.click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
 });

@@ -1,5 +1,6 @@
 import type { GameState } from '../game/types';
 import {
+  isSavePayloadWithinLimit,
   parseSaveEnvelope,
   SAVE_STORAGE_KEY,
   serializeSave,
@@ -18,7 +19,7 @@ export interface SaveWriteSuccess {
 
 export interface SaveWriteFailure {
   ok: false;
-  reason: 'storage-unavailable' | 'storage-write-failed';
+  reason: 'payload-too-large' | 'storage-unavailable' | 'storage-write-failed';
 }
 
 export type SaveWriteResult = SaveWriteSuccess | SaveWriteFailure;
@@ -58,7 +59,9 @@ export class LocalSaveAdapter {
   public save(state: GameState, savedAt?: string): SaveWriteResult {
     if (!this.storage) return { ok: false, reason: 'storage-unavailable' };
     try {
-      this.storage.setItem(this.key, serializeSave(state, savedAt));
+      const raw = serializeSave(state, savedAt);
+      if (!isSavePayloadWithinLimit(raw)) return { ok: false, reason: 'payload-too-large' };
+      this.storage.setItem(this.key, raw);
       return { ok: true };
     } catch {
       return { ok: false, reason: 'storage-write-failed' };
