@@ -268,6 +268,11 @@ milestone completes and tunes the final content pool.
 - [ ] Tune the conservative policy to the documented provisional rescue ranges.
 - [ ] Verify zero initial-state and simulation-invariant failures under every
   policy.
+- Verification checkpoint (`c39ede9`): independent 1,000-seed sensitivity
+  passed at 86.5% rescue / 42.9% all-survivor with a 3.8-point worst exclusion
+  delta, zero invariant failures, and full decision/gap compliance. A distinct
+  1,000-seed three-policy matrix also passed with deterministic repeat output.
+  Keep the release boxes open until the final 10,000-seed manifest runs finish.
 - [ ] Run the documented ten-run human timing sample and meet the 15–25 minute
   criteria.
 - [ ] Profile Canvas, React snapshot cadence, memory, and input responsiveness on
