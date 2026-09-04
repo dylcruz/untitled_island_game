@@ -132,6 +132,7 @@ h3 {
   color: #4b6863;
   font-size: 0.82rem;
   margin: 0;
+  overflow-wrap: anywhere;
   padding: 0.8rem 1rem 1rem;
 }
 
@@ -244,6 +245,27 @@ button.priority.selected {
   overflow-wrap: anywhere;
 }
 
+.resource-state {
+  display: inline-block;
+  font-size: 0.62rem;
+  letter-spacing: 0.04em;
+  margin-left: 0.15rem;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
+.resource-state-good {
+  color: #28635d;
+}
+
+.resource-state-watch {
+  color: #8d6419;
+}
+
+.resource-state-critical {
+  color: #a04e38;
+}
+
 .priority-panel p {
   color: #4b6863;
   font-size: 0.86rem;
@@ -341,11 +363,88 @@ button.priority.selected {
   width: 2.2rem;
 }
 
+.survivor-portrait {
+  align-items: center;
+  background: #f4e7bd;
+  border: 2px solid #173c3a;
+  border-radius: 50%;
+  display: inline-flex;
+  flex: 0 0 2.7rem;
+  height: 2.7rem;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+  width: 2.7rem;
+}
+
+.portrait-face {
+  align-items: center;
+  border: 1px solid #173c3a;
+  border-radius: 46% 46% 42% 42%;
+  color: #173c3a;
+  display: inline-flex;
+  font-size: 0.72rem;
+  font-weight: 900;
+  height: 1.45rem;
+  justify-content: center;
+  margin-top: 0.35rem;
+  width: 1.15rem;
+  z-index: 1;
+}
+
+.portrait-hair,
+.portrait-accent {
+  background: #173c3a;
+  display: block;
+  position: absolute;
+}
+
+.portrait-hair {
+  border-radius: 50% 50% 35% 35%;
+  height: 0.82rem;
+  top: 0.36rem;
+  width: 1.28rem;
+}
+
+.portrait-accent {
+  background: #e7af45;
+  bottom: 0.2rem;
+  height: 0.25rem;
+  width: 1.7rem;
+}
+
+.portrait-1 .portrait-hair {
+  border-radius: 50% 50% 45% 15%;
+  height: 1.05rem;
+  left: 0.48rem;
+  width: 1.65rem;
+}
+
+.portrait-2 .portrait-hair {
+  border-radius: 8% 8% 40% 40%;
+  height: 0.42rem;
+  top: 0.25rem;
+  width: 1.7rem;
+}
+
+.portrait-3 .portrait-accent,
+.portrait-5 .portrait-accent {
+  background: #a04e38;
+  transform: rotate(-12deg);
+}
+
+.portrait-4 .portrait-accent {
+  background: #28635d;
+  border-radius: 50%;
+  height: 0.4rem;
+  width: 0.4rem;
+}
+
 .survivor-heading h3 {
   margin-bottom: 0;
 }
 
-.survivor-variant {
+.survivor-identity {
   color: #4b6863;
   font-size: 0.7rem;
   margin: 0;
@@ -366,7 +465,8 @@ button.priority.selected {
 .survivor-traits,
 .survivor-route,
 .survivor-task,
-.survivor-injury {
+.survivor-injury,
+.survivor-condition {
   font-size: 0.78rem;
   margin: 0.5rem 0 0;
   overflow-wrap: anywhere;
@@ -378,8 +478,92 @@ button.priority.selected {
 
 .survivor-route,
 .survivor-task,
-.survivor-injury {
+.survivor-injury,
+.survivor-condition {
   color: #4b6863;
+}
+
+.survivor-condition-alert {
+  background: #fff1e9;
+  border-left: 3px solid #a04e38;
+  color: #743526;
+  padding: 0.35rem 0.45rem;
+}
+
+.status-meter {
+  background: #edf6f2;
+  border-radius: 0.45rem;
+  min-width: 0;
+  padding: 0.4rem 0.5rem;
+}
+
+.need-grid .status-meter-heading {
+  align-items: baseline;
+  background: transparent;
+  display: flex;
+  gap: 0.3rem;
+  justify-content: space-between;
+  margin: 0;
+  padding: 0;
+}
+
+.status-meter-heading span {
+  color: #4b6863;
+  font-size: 0.7rem;
+}
+
+.status-meter-heading strong {
+  font-size: 0.7rem;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+.status-meter meter {
+  display: block;
+  height: 0.45rem;
+  margin-top: 0.25rem;
+  width: 100%;
+}
+
+.status-meter-critical {
+  background: #fff1e9;
+  border: 1px solid #d1775d;
+}
+
+.status-meter-critical .status-meter-heading strong {
+  color: #a04e38;
+}
+
+.status-meter-watch {
+  background: #fff9e9;
+  border: 1px solid #e7af45;
+}
+
+.status-meter-watch .status-meter-heading strong {
+  color: #8d6419;
+}
+
+.shelter-meter {
+  margin-bottom: 0.8rem;
+}
+
+.shelter-status {
+  font-size: 0.78rem;
+  margin: 0.4rem 0 0;
+}
+
+.shelter-status-critical {
+  color: #a04e38;
+  font-weight: 800;
+}
+
+.shelter-status-watch {
+  color: #8d6419;
+  font-weight: 700;
+}
+
+.shelter-status-good {
+  color: #28635d;
 }
 
 code {
@@ -397,11 +581,48 @@ code {
   margin: 1rem 0 0;
 }
 
-.history ol {
+.history-log {
   color: #4b6863;
+  display: grid;
   font-size: 0.82rem;
+  gap: 0.35rem;
   margin: 0;
-  padding-left: 1.2rem;
+}
+
+.section-heading-row {
+  align-items: baseline;
+  display: flex;
+  justify-content: space-between;
+}
+
+.history-caption {
+  color: #80958f;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+}
+
+.history-entry {
+  padding-left: 0.15rem;
+}
+
+.history-entry-event {
+  color: #28635d;
+  font-weight: 700;
+}
+
+.history-meta {
+  color: #80958f;
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.history-empty {
+  color: #4b6863;
+  font-size: 0.8rem;
+  margin-bottom: 0;
 }
 
 .event-panel,
@@ -426,6 +647,10 @@ code {
   color: #4b6863;
 }
 
+.event-panel h3 {
+  margin-bottom: 0.35rem;
+}
+
 .event-reference {
   border-left: 3px solid #e7af45;
   padding-left: 0.6rem;
@@ -435,6 +660,112 @@ code {
 .ending-actions {
   display: grid;
   gap: 0.65rem;
+}
+
+.event-choice-card {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(40, 99, 93, 0.2);
+  border-radius: 0.7rem;
+  padding: 0.75rem;
+}
+
+.event-choice-heading {
+  align-items: start;
+  display: flex;
+  gap: 0.5rem;
+  justify-content: space-between;
+}
+
+.event-choice-heading h3 {
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.risk-badge {
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  flex: 0 0 auto;
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 0.12rem 0.42rem;
+}
+
+.risk-low {
+  color: #28635d;
+}
+
+.risk-moderate {
+  color: #8d6419;
+}
+
+.risk-high {
+  color: #a04e38;
+}
+
+.choice-facts {
+  display: grid;
+  gap: 0.4rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0.6rem 0;
+}
+
+.choice-facts div {
+  background: #edf6f2;
+  border-radius: 0.4rem;
+  min-width: 0;
+  padding: 0.4rem 0.5rem;
+}
+
+.choice-facts dt {
+  color: #4b6863;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+}
+
+.choice-facts dd {
+  font-size: 0.78rem;
+  font-weight: 800;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.choice-impact-label {
+  color: #4b6863;
+  font-size: 0.72rem;
+  font-weight: 800;
+  margin: 0.5rem 0 0.2rem;
+  text-transform: uppercase;
+}
+
+.choice-impact-list {
+  color: #4b6863;
+  font-size: 0.78rem;
+  margin: 0 0 0.55rem;
+  padding-left: 1.1rem;
+}
+
+.choice-follow-up {
+  border-left: 3px solid #e7af45;
+  color: #6e5420;
+  font-size: 0.76rem;
+  margin: 0.45rem 0;
+  padding-left: 0.5rem;
+}
+
+.event-choice-card button {
+  margin-top: 0.25rem;
+  width: 100%;
+}
+
+.selected-choice {
+  border-left: 3px solid #28635d;
+  padding-left: 0.6rem;
+}
+
+.result-details {
+  border-top: 1px solid rgba(40, 99, 93, 0.16);
+  margin-top: 0.9rem;
+  padding-top: 0.65rem;
 }
 
 .ending h3 {
@@ -488,12 +819,6 @@ code {
   color: #6e3c2e;
   margin: 1rem 0 0;
   padding: 0.7rem 0.85rem;
-}
-
-@media (min-width: 900px) {
-  .survivor-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
 }
 
 @media (max-width: 760px) {

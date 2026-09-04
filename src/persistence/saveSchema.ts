@@ -3,11 +3,13 @@ import { EVENT_BY_ID, eventRegistryForMode } from '../game/events';
 import { cloneGameState } from '../game/simulation';
 import { RANDOM_STREAM_NAMES } from '../game/random';
 import { TRAIT_BY_ID, productivityMultiplier, traitsAreCompatible } from '../game/traits';
-import { RULES_VERSION, TUNING, validateGameConfig } from '../game/tuning';
+import { RISK_PROBABILITY_RANGES, RULES_VERSION, TUNING, validateGameConfig } from '../game/tuning';
 import type {
   EventDefinition,
+  EffectData,
   GameState,
   RandomStreamState,
+  RiskLevel,
   SourceId,
   SurvivorState,
   TraitId,
@@ -38,6 +40,8 @@ const SOURCE_IDS = ['water', 'forage', 'wreckage', 'forest'] as const;
 const RESOURCE_IDS = ['water', 'food', 'materials'] as const;
 const NEED_IDS = ['health', 'hunger', 'thirst', 'energy'] as const;
 const INJURY_KINDS = ['cut', 'sprain', 'burn'] as const;
+const RISK_LEVELS = ['low', 'moderate', 'high'] as const;
+const RISK_SEVERITIES = ['none', 'minor', 'moderate', 'severe'] as const;
 const STATUSES = ['running', 'decision', 'event-result', 'victory', 'defeat'] as const;
 const TASK_KINDS = [
   'drink',
@@ -195,7 +199,16 @@ function isEffect(value: unknown): boolean {
     !['participant', 'group'].includes(value.targetScope as string)
   )
     return false;
-  if (value.probability !== undefined && !isBounded(value.probability, 1)) return false;
+  if (
+    value.riskLevel !== undefined &&
+    !['low', 'moderate', 'high'].includes(value.riskLevel as string)
+  )
+    return false;
+  if (value.probability !== undefined) {
+    if (!isBounded(value.probability, 1) || value.riskLevel === undefined) return false;
+    const range = RISK_PROBABILITY_RANGES[value.riskLevel as RiskLevel];
+    if (value.probability < range.min || value.probability > range.max) return false;
+  }
   if (value.kind === 'health' || value.kind === 'morale' || value.kind === 'shelter')
     return value.target === undefined;
   if (value.kind === 'resource') return RESOURCE_IDS.includes(value.target as never);
@@ -203,6 +216,48 @@ function isEffect(value: unknown): boolean {
   if (value.kind === 'injury')
     return INJURY_KINDS.includes(value.target as never) && value.amount > 0 && value.amount <= 3;
   return false;
+}
+
+function isRiskPresentation(value: unknown): boolean {
+  if (!isRecord(value)) return false;
+  if (
+    !RISK_LEVELS.includes(value.level as never) ||
+    !RISK_SEVERITIES.includes(value.severity as never) ||
+    !isNonEmptyString(value.label) ||
+    !isRecord(value.probabilityRange) ||
+    !isFiniteNumber(value.probabilityRange.min) ||
+    !isFiniteNumber(value.probabilityRange.max)
+  )
+    return false;
+  const range = RISK_PROBABILITY_RANGES[value.level as RiskLevel];
+  return value.probabilityRange.min === range.min && value.probabilityRange.max === range.max;
+}
+
+function isAuthoritativeChoice(choice: EventDefinition['choices'][number]): boolean {
+  if (!isRiskPresentation(choice.risk)) return false;
+  for (const effect of [
+    ...choice.immediateEffects,
+    ...(choice.delayedEffect ? [choice.delayedEffect.effect] : []),
+  ]) {
+    if (!isEffect(effect)) return false;
+    if (effect.probability !== undefined && effect.riskLevel !== choice.risk.level) return false;
+  }
+  return true;
+}
+
+function effectsMatch(left: EffectData, right: EffectData): boolean {
+  return (
+    left.kind === right.kind &&
+    left.target === right.target &&
+    left.amount === right.amount &&
+    left.targetScope === right.targetScope &&
+    left.probability === right.probability &&
+    left.riskLevel === right.riskLevel
+  );
+}
+
+function sameParticipantIds(left: readonly string[], right: readonly string[]): boolean {
+  return left.length === right.length && left.every((id, index) => id === right[index]);
 }
 
 function eventIdsForMode(mode: 'slice' | 'production'): readonly string[] {
@@ -333,6 +388,10 @@ function isValidGameState(value: unknown): value is GameState {
   const config = value.config as unknown as GameState['config'];
   const status = value.status as GameState['status'];
   const modeEventIds = eventIdsForMode(config.mode);
+  if (
+    !eventRegistryForMode(config.mode).every((event) => event.choices.every(isAuthoritativeChoice))
+  )
+    return false;
   if (
     !isRecord(value.clock) ||
     !isInteger(value.clock.tick) ||
@@ -534,12 +593,33 @@ function isValidGameState(value: unknown): value is GameState {
   if (
     new Set(scheduledEffects.map((effect) => effect.id)).size !== scheduledEffects.length ||
     !scheduledEffects.every((effect) => {
+      const sourceChoice = choiceDefinitionFor(
+        config.mode,
+        effect.sourceEventId,
+        effect.sourceChoiceId,
+      );
+      const authoredDelayedEffect = sourceChoice?.delayedEffect;
+      const matchingChoiceRecord = choiceRecords.some(
+        (record) =>
+          isRecord(record) &&
+          record.eventId === effect.sourceEventId &&
+          record.choiceId === effect.sourceChoiceId &&
+          Array.isArray(record.participantIds) &&
+          Array.isArray(effect.participantIds) &&
+          sameParticipantIds(record.participantIds as string[], effect.participantIds),
+      );
       if (
         !isNonEmptyString(effect.id) ||
         !isIntegerBounded(effect.dueTick, clockTick + 1, config.rescueTick) ||
         !eventDefinitionFor(config.mode, effect.sourceEventId) ||
+        !isNonEmptyString(effect.sourceChoiceId) ||
+        !sourceChoice ||
+        !authoredDelayedEffect ||
+        !matchingChoiceRecord ||
         !isEffect(effect.effect) ||
-        !isNonEmptyString(effect.description)
+        !isNonEmptyString(effect.description) ||
+        !effectsMatch(effect.effect, authoredDelayedEffect.effect) ||
+        effect.description !== authoredDelayedEffect.description
       )
         return false;
       return (
@@ -583,7 +663,7 @@ function isValidGameState(value: unknown): value is GameState {
           !eventDefinitionFor(config.mode, followUp.eventId) ||
           !eventDefinitionFor(config.mode, followUp.sourceEventId) ||
           !choiceDefinitionFor(config.mode, followUp.sourceEventId, followUp.sourceChoiceId) ||
-          !isIntegerBounded(followUp.earliestTick, clockTick + 1, config.rescueTick)
+          !isIntegerBounded(followUp.earliestTick, clockTick, config.rescueTick)
         )
           return false;
         const sourceChoice = choiceDefinitionFor(
@@ -649,8 +729,8 @@ function isValidGameState(value: unknown): value is GameState {
         return false;
       const key = `${record.eventId}:${record.choiceId}`;
       if (
-        choiceRecordKeys.has(key) ||
-        (!event.repeatable && choiceRecordEventIds.has(record.eventId))
+        !event.repeatable &&
+        (choiceRecordKeys.has(key) || choiceRecordEventIds.has(record.eventId))
       )
         return false;
       choiceRecordKeys.add(key);

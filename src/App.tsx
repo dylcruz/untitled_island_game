@@ -8,14 +8,25 @@ import { SLICE_GAME_CONFIG } from './game/tuning';
 import type {
   CampPriority,
   CommandRejectionReason,
+  EffectData,
+  EventChoiceDefinition,
   GameSnapshot,
+  HistoryEntry,
+  NeedState,
+  ResourceId,
+  RiskSeverity,
   Speed,
   SurvivorState,
 } from './game/types';
 import { SPEEDS } from './game/types';
 import { LocalSaveAdapter, SLICE_SAVE_STORAGE_KEY } from './persistence';
 import { GameController } from './runtime/GameController';
-import { CanvasRenderer, waypointSummary } from './rendering/CanvasRenderer';
+import {
+  CanvasRenderer,
+  cosmeticVariantLabel,
+  waypointLabel,
+  waypointSummary,
+} from './rendering/CanvasRenderer';
 
 const speedLabel = (speed: Speed): string => `${speed}x`;
 const formatValue = (value: number): string => Math.round(value).toString();
@@ -61,10 +72,6 @@ const COMMAND_REASON_LABELS: Record<CommandRejectionReason, string> = {
   'unknown-command': 'the command is not recognized',
 };
 
-function formatTaskKind(kind: string): string {
-  return kind.replaceAll('-', ' ');
-}
-
 function formatTaskReason(reason: NonNullable<SurvivorState['activeTask']>['reason']): string {
   const entries = Object.entries(reason.params).map(([key, value]) => `${key}=${value}`);
   return `${reason.code}${entries.length ? ` (${entries.join(', ')})` : ''}`;
@@ -72,6 +79,147 @@ function formatTaskReason(reason: NonNullable<SurvivorState['activeTask']>['reas
 
 function formatSourceId(id: string): string {
   return id.replaceAll('-', ' ');
+}
+
+const RESOURCE_LABELS: Record<ResourceId, string> = {
+  water: 'water',
+  food: 'food',
+  materials: 'materials',
+};
+
+const NEED_LABELS: Record<keyof NeedState, string> = {
+  health: 'health',
+  hunger: 'hunger',
+  thirst: 'thirst',
+  energy: 'energy',
+};
+
+const HISTORY_KIND_LABELS: Record<HistoryEntry['kind'], string> = {
+  task: 'Activity',
+  resource: 'Supply',
+  event: 'Event',
+  effect: 'Effect',
+  health: 'Health',
+  terminal: 'Milestone',
+  day: 'Daybreak',
+};
+
+const PORTRAIT_VARIANTS = [
+  'sun cap',
+  'braided hair',
+  'bandana',
+  'wind scarf',
+  'shell pin',
+  'rain hood',
+];
+
+function titleCase(value: string): string {
+  return value.replaceAll('-', ' ').replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
+function formatProbabilityRange(min: number, max: number): string {
+  const lower = Math.round(min * 100);
+  const upper = Math.round(max * 100);
+  return lower === upper ? `${lower}%` : `${lower}%–${upper}%`;
+}
+
+function formatRiskSeverity(severity: RiskSeverity): string {
+  return severity === 'none' ? 'No stated severity' : `${titleCase(severity)} severity`;
+}
+
+function choiceCosts(choice: EventChoiceDefinition): { resource: ResourceId; amount: number }[] {
+  const costs = new Map<ResourceId, number>();
+  for (const effect of choice.immediateEffects) {
+    if (effect.kind !== 'resource' || !effect.target || effect.amount >= 0) continue;
+    const resource = effect.target as ResourceId;
+    if (!(resource in RESOURCE_LABELS)) continue;
+    costs.set(resource, (costs.get(resource) ?? 0) - effect.amount);
+  }
+  return [...costs.entries()].map(([resource, amount]) => ({ resource, amount }));
+}
+
+function effectTargetLabel(effect: EffectData): string {
+  if (effect.kind === 'resource' && effect.target && effect.target in RESOURCE_LABELS)
+    return RESOURCE_LABELS[effect.target as ResourceId];
+  if (effect.kind === 'need' && effect.target && effect.target in NEED_LABELS)
+    return NEED_LABELS[effect.target as keyof NeedState];
+  if (effect.kind === 'injury' && effect.target) return `${effect.target} injury`;
+  if (effect.kind === 'shelter') return 'shelter condition';
+  if (effect.kind === 'health') return 'health';
+  if (effect.kind === 'morale') return 'morale';
+  return effect.kind;
+}
+
+function effectScopeLabel(effect: EffectData): string {
+  return effect.targetScope === 'group'
+    ? 'everyone'
+    : effect.targetScope === 'participant'
+      ? 'involved survivor'
+      : 'camp';
+}
+
+function formatEffect(effect: EffectData): string {
+  const amount = `${effect.amount > 0 ? '+' : ''}${effect.amount}`;
+  const qualifier = effect.probability === undefined ? '' : ' if the risk occurs';
+  return `${effectTargetLabel(effect)} ${amount} · ${effectScopeLabel(effect)}${qualifier}`;
+}
+
+function formatHistoryTick(tick: number, ticksPerDay: number): string {
+  return `Day ${Math.floor(tick / ticksPerDay) + 1} · step ${tick.toLocaleString()}`;
+}
+
+function needStatus(
+  kind: keyof NeedState | 'morale',
+  value: number,
+): { label: string; tone: 'good' | 'watch' | 'critical' } {
+  const lowIsBad = kind === 'health' || kind === 'energy' || kind === 'morale';
+  if (lowIsBad) {
+    if (value <= (kind === 'health' ? 25 : kind === 'energy' ? 18 : 25))
+      return { label: 'Critical', tone: 'critical' };
+    if (value <= (kind === 'health' ? 50 : kind === 'energy' ? 35 : 45))
+      return { label: 'Low', tone: 'watch' };
+    return { label: 'Stable', tone: 'good' };
+  }
+  if (value >= 85) return { label: 'Critical', tone: 'critical' };
+  if (value >= 68) return { label: 'High', tone: 'watch' };
+  return { label: 'Good', tone: 'good' };
+}
+
+function resourceStatus(value: number): { label: string; tone: 'good' | 'watch' | 'critical' } {
+  if (value <= 0) return { label: 'Depleted', tone: 'critical' };
+  if (value <= 2) return { label: 'Low', tone: 'watch' };
+  return { label: 'Stocked', tone: 'good' };
+}
+
+function StatusMeter({
+  label,
+  value,
+  kind,
+}: {
+  label: string;
+  value: number;
+  kind: keyof NeedState | 'morale';
+}): ReactElement {
+  const status = needStatus(kind, value);
+  const bounded = Math.max(0, Math.min(100, value));
+  return (
+    <div className={`status-meter status-meter-${status.tone}`}>
+      <div className="status-meter-heading">
+        <span>{label}</span>
+        <strong>
+          {formatValue(value)} · {status.label}
+        </strong>
+      </div>
+      <meter
+        min="0"
+        max="100"
+        value={bounded}
+        aria-label={`${label}: ${formatValue(value)}, ${status.label}`}
+      >
+        {formatValue(value)}
+      </meter>
+    </div>
+  );
 }
 
 function CanvasView({ snapshot }: { snapshot: GameSnapshot }): ReactElement {
@@ -100,10 +248,12 @@ function CanvasView({ snapshot }: { snapshot: GameSnapshot }): ReactElement {
       resizeObserver?.disconnect();
     };
   }, []);
-  const label =
+  const time = deriveTime(snapshot);
+  const compatibilityLabel =
     snapshot.config.mode === 'slice'
       ? 'Authored island map with one moving survivor'
       : 'Authored island map with three moving survivor placeholders';
+  const label = `${compatibilityLabel}; final map has fixed routes, ${cosmeticVariantLabel(snapshot.island.cosmeticVariant)} scenery, ${time.phase} lighting, and ${snapshot.survivors.length} distinct survivor markers`;
   return (
     <canvas
       ref={canvasRef}
@@ -111,6 +261,8 @@ function CanvasView({ snapshot }: { snapshot: GameSnapshot }): ReactElement {
       role="img"
       aria-describedby="island-summary"
       aria-label={label}
+      data-cosmetic-variant={snapshot.island.cosmeticVariant}
+      data-phase={time.phase}
     />
   );
 }
@@ -118,6 +270,19 @@ function CanvasView({ snapshot }: { snapshot: GameSnapshot }): ReactElement {
 function SurvivorCard({ survivor }: { survivor: SurvivorState }): ReactElement {
   const task = survivor.activeTask;
   const traitNames = survivor.traits.map((trait) => TRAIT_BY_ID[trait].name).join(' · ');
+  const statusMessages: string[] = [];
+  if (!survivor.alive) statusMessages.push('Lost from the expedition');
+  else if (survivor.needs.health <= 25) statusMessages.push('Critical health');
+  else if (survivor.needs.health <= 50) statusMessages.push('Health needs attention');
+  if (survivor.needs.thirst >= 85) statusMessages.push('Dehydrated');
+  else if (survivor.needs.thirst >= 68) statusMessages.push('Thirst is high');
+  if (survivor.needs.hunger >= 85) statusMessages.push('Starving');
+  if (survivor.needs.energy <= 18) statusMessages.push('Exhausted');
+  if (survivor.injury)
+    statusMessages.push(
+      `${titleCase(survivor.injury.kind)} injury, severity ${survivor.injury.severity}`,
+    );
+  const movement = task?.phase === 'travel' || survivor.currentWaypoint !== survivor.targetWaypoint;
   return (
     <li
       className={`survivor-card${survivor.alive ? '' : ' survivor-card-lost'}`}
@@ -125,16 +290,26 @@ function SurvivorCard({ survivor }: { survivor: SurvivorState }): ReactElement {
     >
       <div className="survivor-heading">
         <span
-          className="survivor-avatar"
-          style={{ backgroundColor: survivor.color }}
-          aria-label={`Color ${survivor.color}`}
+          className={`survivor-portrait portrait-${survivor.visualVariant % PORTRAIT_VARIANTS.length}`}
+          data-testid="survivor-portrait"
+          data-visual-variant={survivor.visualVariant}
+          role="img"
+          aria-label={`Portrait of ${survivor.name}; ${PORTRAIT_VARIANTS[survivor.visualVariant % PORTRAIT_VARIANTS.length]}`}
         >
-          {survivor.name.slice(0, 1)}
+          <span className="portrait-hair" aria-hidden="true" />
+          <span
+            className="portrait-face"
+            style={{ backgroundColor: survivor.color }}
+            aria-hidden="true"
+          >
+            {survivor.name.slice(0, 1)}
+          </span>
+          <span className="portrait-accent" aria-hidden="true" />
         </span>
         <div>
           <h3>{survivor.name}</h3>
-          <p className="survivor-variant">
-            Color {survivor.color} · Variant {survivor.visualVariant + 1}
+          <p className="survivor-identity">
+            {PORTRAIT_VARIANTS[survivor.visualVariant % PORTRAIT_VARIANTS.length]} portrait
           </p>
         </div>
         <strong className="survivor-alive">{survivor.alive ? 'Alive' : 'Lost'}</strong>
@@ -142,34 +317,31 @@ function SurvivorCard({ survivor }: { survivor: SurvivorState }): ReactElement {
       <p className="survivor-traits">
         <strong>Traits:</strong> {traitNames}
       </p>
-      <dl className="need-grid">
-        <div>
-          <dt>Health</dt>
-          <dd>{formatValue(survivor.needs.health)}</dd>
-        </div>
-        <div>
-          <dt>Hunger</dt>
-          <dd>{formatValue(survivor.needs.hunger)}</dd>
-        </div>
-        <div>
-          <dt>Thirst</dt>
-          <dd>{formatValue(survivor.needs.thirst)}</dd>
-        </div>
-        <div>
-          <dt>Energy</dt>
-          <dd>{formatValue(survivor.needs.energy)}</dd>
-        </div>
-        <div>
-          <dt>Morale</dt>
-          <dd>{formatValue(survivor.morale)}</dd>
-        </div>
-      </dl>
+      <div className="need-grid" aria-label={`${survivor.name} condition meters`}>
+        <StatusMeter label="Health" value={survivor.needs.health} kind="health" />
+        <StatusMeter label="Hunger" value={survivor.needs.hunger} kind="hunger" />
+        <StatusMeter label="Thirst" value={survivor.needs.thirst} kind="thirst" />
+        <StatusMeter label="Energy" value={survivor.needs.energy} kind="energy" />
+        <StatusMeter label="Morale" value={survivor.morale} kind="morale" />
+      </div>
+      <p
+        className={`survivor-condition${statusMessages.length ? ' survivor-condition-alert' : ''}`}
+        data-testid="survivor-status"
+      >
+        <strong>Status:</strong>{' '}
+        {statusMessages.length ? statusMessages.join(' · ') : 'Stable and ready'}
+      </p>
       <p className="survivor-route">
-        <strong>Route:</strong> {survivor.currentWaypoint} → {survivor.targetWaypoint}
+        <strong>{movement ? 'Moving:' : 'At:'}</strong>{' '}
+        {movement
+          ? `${waypointLabel(survivor.currentWaypoint)} → ${waypointLabel(survivor.targetWaypoint)}`
+          : waypointLabel(survivor.currentWaypoint)}
       </p>
       <p className="survivor-task">
-        <strong>Task:</strong>{' '}
-        {task ? `${formatTaskKind(task.kind)} · ${task.phase} at ${task.destination}` : 'none'}
+        <strong>Activity:</strong>{' '}
+        {task
+          ? `${titleCase(task.kind)} · ${task.phase} at ${waypointLabel(task.destination)} (${task.remainingTicks} ticks)`
+          : 'Idle at camp'}
       </p>
       <p className="survivor-task">
         <strong>Reason:</strong>{' '}
@@ -210,6 +382,7 @@ export default function App(): ReactElement {
   const [snapshot, setSnapshot] = useState<GameSnapshot>(() => createSnapshot(initialState));
   const [started, setStarted] = useState(false);
   const [commandMessage, setCommandMessage] = useState('');
+  const eventPanelRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     const unsubscribe = controller.subscribe(setSnapshot);
@@ -218,6 +391,16 @@ export default function App(): ReactElement {
       controller.destroy();
     };
   }, [controller]);
+
+  useEffect(() => {
+    if (
+      !eventPanelRef.current ||
+      (snapshot.status !== 'decision' && snapshot.status !== 'event-result')
+    )
+      return;
+    const firstAction = eventPanelRef.current.querySelector<HTMLElement>('button');
+    firstAction?.focus();
+  }, [snapshot.status, snapshot.activeEvent?.id]);
 
   const begin = (): void => {
     controller.start();
@@ -292,27 +475,42 @@ export default function App(): ReactElement {
           choice.choiceId === snapshot.activeEvent?.referencedChoice?.choiceId,
       )
     : undefined;
+  const selectedChoice =
+    event && snapshot.activeEvent?.chosenChoiceId
+      ? event.choices.find((choice) => choice.id === snapshot.activeEvent?.chosenChoiceId)
+      : undefined;
+  const scheduledForChoice =
+    selectedChoice && snapshot.activeEvent
+      ? snapshot.scheduledEffects.find(
+          (scheduled) =>
+            scheduled.sourceEventId === snapshot.activeEvent?.id &&
+            scheduled.sourceChoiceId === selectedChoice.id,
+        )
+      : undefined;
+  const followUpForChoice = selectedChoice?.followUpEventId
+    ? EVENT_BY_ID[selectedChoice.followUpEventId]
+    : undefined;
 
   return (
     <main className="app-shell">
       <header className="app-header">
         <p className="eyebrow">
-          {isSlice
-            ? 'Internal · Milestone 1 technical slice'
-            : 'Milestone 2 · production experience'}
+          {isSlice ? 'Internal · Milestone 1 technical slice' : 'Milestone 3 · final presentation'}
         </p>
         <h1>Untitled Island</h1>
         <p className="lede">
           {isSlice
             ? 'Keep one survivor alive, respond to island events, and hold out until rescue.'
-            : 'Keep all three survivors alive for 14 days until rescue. Guide the camp, watch their autonomous work, and make the choices that shape the run.'}
+            : 'Keep all three survivors alive for 14 days until rescue. Read the island at a glance, follow every survivor’s work, and make informed choices when the shoreline changes.'}
         </p>
       </header>
       <section className="game-layout" aria-label="Island simulation">
         <div className="map-card">
           <CanvasView snapshot={snapshot} />
           <p id="island-summary" className="map-summary">
-            Fixed locations: {waypointSummary()}.
+            Fixed gameplay geometry: {waypointSummary()}. Cosmetic scenery:{' '}
+            {cosmeticVariantLabel(snapshot.island.cosmeticVariant)} (seeded variant{' '}
+            {snapshot.island.cosmeticVariant + 1} of 4). Lighting: {time.phase}.
           </p>
         </div>
         <aside className="control-card" aria-label="Simulation controls">
@@ -397,15 +595,36 @@ export default function App(): ReactElement {
                 <dl>
                   <div>
                     <dt>Water</dt>
-                    <dd>{formatValue(snapshot.resources.water)}</dd>
+                    <dd>
+                      {formatValue(snapshot.resources.water)}{' '}
+                      <span
+                        className={`resource-state resource-state-${resourceStatus(snapshot.resources.water).tone}`}
+                      >
+                        {resourceStatus(snapshot.resources.water).label}
+                      </span>
+                    </dd>
                   </div>
                   <div>
                     <dt>Food</dt>
-                    <dd>{formatValue(snapshot.resources.food)}</dd>
+                    <dd>
+                      {formatValue(snapshot.resources.food)}{' '}
+                      <span
+                        className={`resource-state resource-state-${resourceStatus(snapshot.resources.food).tone}`}
+                      >
+                        {resourceStatus(snapshot.resources.food).label}
+                      </span>
+                    </dd>
                   </div>
                   <div>
                     <dt>Materials</dt>
-                    <dd>{formatValue(snapshot.resources.materials)}</dd>
+                    <dd>
+                      {formatValue(snapshot.resources.materials)}{' '}
+                      <span
+                        className={`resource-state resource-state-${resourceStatus(snapshot.resources.materials).tone}`}
+                      >
+                        {resourceStatus(snapshot.resources.materials).label}
+                      </span>
+                    </dd>
                   </div>
                   <div>
                     <dt>Shelter</dt>
@@ -415,6 +634,22 @@ export default function App(): ReactElement {
                     </dd>
                   </div>
                 </dl>
+                <div className="shelter-meter">
+                  <StatusMeter
+                    label="Shelter integrity"
+                    value={snapshot.shelter.condition}
+                    kind="health"
+                  />
+                  <p
+                    className={`shelter-status shelter-status-${needStatus('health', snapshot.shelter.condition).tone}`}
+                  >
+                    {snapshot.shelter.condition <= 25
+                      ? 'Critical damage — repair before nightfall.'
+                      : snapshot.shelter.condition <= 50
+                        ? 'Damaged — vulnerable to worsening weather.'
+                        : 'Sound enough for the next rest cycle.'}
+                  </p>
+                </div>
               </section>
               <section className="stats" aria-label="Source availability">
                 <h2>Source availability</h2>
@@ -505,14 +740,49 @@ export default function App(): ReactElement {
               </section>
             </>
           ) : (
-            <section className="survivor-section" aria-label="Survivors">
-              <h2>Survivors</h2>
-              <ul className="survivor-grid">
-                {snapshot.survivors.map((survivor) => (
-                  <SurvivorCard key={survivor.id} survivor={survivor} />
-                ))}
-              </ul>
-            </section>
+            <>
+              <section className="survivor-section" aria-label="Survivors">
+                <h2>Survivors</h2>
+                <ul className="survivor-grid">
+                  {snapshot.survivors.map((survivor) => (
+                    <SurvivorCard key={survivor.id} survivor={survivor} />
+                  ))}
+                </ul>
+              </section>
+              <section
+                className="history"
+                aria-label="Recent history"
+                data-testid="production-history"
+              >
+                <div className="section-heading-row">
+                  <h2>Recent history</h2>
+                  <span className="history-caption">Newest first</span>
+                </div>
+                {snapshot.history.length ? (
+                  <div className="history-log">
+                    {snapshot.history
+                      .slice(-8)
+                      .reverse()
+                      .map((entry) => (
+                        <article
+                          key={entry.id}
+                          className={`history-entry history-entry-${entry.kind}`}
+                        >
+                          <span className="history-meta">
+                            {HISTORY_KIND_LABELS[entry.kind]} ·{' '}
+                            {formatHistoryTick(entry.tick, snapshot.config.ticksPerDay)}
+                          </span>
+                          <span>{entry.message}</span>
+                        </article>
+                      ))}
+                  </div>
+                ) : (
+                  <p className="history-empty">
+                    Begin the run to record camp activity, choices, and effects.
+                  </p>
+                )}
+              </section>
+            </>
           )}
           <p className="assistive-note">
             The map is decorative; survivor details and destinations are listed above.
@@ -522,6 +792,7 @@ export default function App(): ReactElement {
 
       {event && snapshot.status === 'decision' && (
         <section
+          ref={eventPanelRef}
           className="event-panel"
           role="dialog"
           aria-modal="true"
@@ -541,16 +812,73 @@ export default function App(): ReactElement {
             </p>
           )}
           <div className="event-actions">
-            {event.choices.map((choice) => (
-              <button type="button" key={choice.id} onClick={() => choose(choice.id)}>
-                {choice.label}
-              </button>
-            ))}
+            {event.choices.map((choice) => {
+              const costs = choiceCosts(choice);
+              return (
+                <article
+                  className="event-choice-card"
+                  key={choice.id}
+                  data-testid="event-choice-card"
+                >
+                  <div className="event-choice-heading">
+                    <h3>{choice.label}</h3>
+                    <span className={`risk-badge risk-${choice.risk.level}`}>
+                      {choice.risk.label}
+                    </span>
+                  </div>
+                  <dl className="choice-facts">
+                    <div>
+                      <dt>Supply cost</dt>
+                      <dd>
+                        {costs.length
+                          ? costs
+                              .map(
+                                ({ resource, amount }) => `${amount} ${RESOURCE_LABELS[resource]}`,
+                              )
+                              .join(' · ')
+                          : 'No supply cost'}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Risk window</dt>
+                      <dd>
+                        {formatRiskSeverity(choice.risk.severity)} ·{' '}
+                        {formatProbabilityRange(
+                          choice.risk.probabilityRange.min,
+                          choice.risk.probabilityRange.max,
+                        )}
+                      </dd>
+                    </div>
+                  </dl>
+                  <p className="choice-impact-label">Known immediate impact</p>
+                  <ul className="choice-impact-list">
+                    {choice.immediateEffects.map((effect, index) => (
+                      <li key={`${choice.id}-effect-${index}`}>{formatEffect(effect)}</li>
+                    ))}
+                  </ul>
+                  {choice.delayedEffect && (
+                    <p className="choice-follow-up">
+                      Follow-up in {choice.delayedEffect.delayTicks} ticks:{' '}
+                      {choice.delayedEffect.description}
+                    </p>
+                  )}
+                  {choice.followUpEventId && (
+                    <p className="choice-follow-up">
+                      Possible follow-up event: {EVENT_BY_ID[choice.followUpEventId].title}.
+                    </p>
+                  )}
+                  <button type="button" onClick={() => choose(choice.id)}>
+                    Choose {choice.label}
+                  </button>
+                </article>
+              );
+            })}
           </div>
         </section>
       )}
       {event && snapshot.status === 'event-result' && (
         <section
+          ref={eventPanelRef}
           className="event-panel"
           role="dialog"
           aria-modal="true"
@@ -558,11 +886,45 @@ export default function App(): ReactElement {
         >
           <p className="event-kicker">Decision resolved</p>
           <h2 id="result-title">Decision result</h2>
-          <p aria-live="polite">{snapshot.activeEvent?.result}</p>
+          <p aria-live="polite">
+            <strong>Outcome:</strong> {snapshot.activeEvent?.result}
+          </p>
+          {selectedChoice && (
+            <p className="selected-choice" data-testid="selected-choice">
+              <strong>Selected choice:</strong> {selectedChoice.label}
+            </p>
+          )}
           <p>
             <strong>Survivors involved:</strong>{' '}
             {eventParticipants.length ? eventParticipants.join(', ') : 'the camp'}
           </p>
+          {selectedChoice && (
+            <div className="result-details" data-testid="result-details">
+              <h3>Immediate impact</h3>
+              <ul className="choice-impact-list">
+                {selectedChoice.immediateEffects.map((effect, index) => (
+                  <li key={`result-effect-${index}`}>{formatEffect(effect)}</li>
+                ))}
+              </ul>
+              {scheduledForChoice ? (
+                <p className="choice-follow-up">
+                  Delayed consequence scheduled for{' '}
+                  {formatHistoryTick(scheduledForChoice.dueTick, snapshot.config.ticksPerDay)}:{' '}
+                  {scheduledForChoice.description}
+                </p>
+              ) : selectedChoice.delayedEffect ? (
+                <p className="choice-follow-up">
+                  Delayed consequence: {selectedChoice.delayedEffect.description} (if it fits before
+                  rescue).
+                </p>
+              ) : null}
+              {followUpForChoice && (
+                <p className="choice-follow-up">
+                  Follow-up event queued: {followUpForChoice.title}.
+                </p>
+              )}
+            </div>
+          )}
           {referencedChoice && (
             <p className="event-reference">
               Prior choice reference: {EVENT_BY_ID[referencedChoice.eventId].title} ·{' '}

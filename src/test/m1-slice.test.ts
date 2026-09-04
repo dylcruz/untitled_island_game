@@ -159,6 +159,7 @@ describe('M1 technical slice', () => {
         id: 'lethal',
         dueTick: 360,
         sourceEventId: 'supply-cache',
+        sourceChoiceId: 'force-open',
         effect: { kind: 'health', amount: -20 },
         description: 'A final consequence lands.',
       },

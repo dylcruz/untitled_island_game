@@ -24,8 +24,8 @@ import type {
 
 const DEFAULT_RUNS = 10;
 const DEFAULT_SEED = 'm2-headless';
-const POLICY_ID = 'm2-conservative';
-const POLICY_VERSION = 'm2';
+const POLICY_ID = 'm3-conservative';
+const POLICY_VERSION = 'm3';
 const SLICE_POLICY_ID = 'm1-slice-first-choice';
 const SLICE_POLICY_VERSION = 'm1';
 
@@ -75,6 +75,11 @@ const CONSERVATIVE_EVENT_CHOICES: Readonly<Partial<Record<EventId, ChoiceId>>> =
   'forager-instinct': 'trust-instinct',
   'smoke-on-horizon': 'conserve',
   'signal-answer': 'save-fuel',
+  'freshwater-seep': 'mark-source',
+  'seep-follow-up': 'collect-carefully',
+  'storm-front': 'wait-it-out',
+  'driftwood-cache': 'leave-wood',
+  'night-watch': 'sleep-safe',
 };
 
 interface InvariantFailure {
@@ -106,6 +111,7 @@ interface SimulationResult {
   survivorCount: number;
   aliveCount: number;
   eventCount: number;
+  minDecisionSpacingTicks: number | null;
   maxDecisionGapTicks: number;
   taskReasonCounts: Partial<Record<TaskReasonCode, number>>;
   priorityUsage: Record<CampPriority, number>;
@@ -128,6 +134,7 @@ interface RunTracker {
   failures: InvariantFailure[];
   failureKeys: Set<string>;
   commandTrace: CommandTraceEntry[];
+  decisionTicks: number[];
 }
 
 function parseArgument(name: string): string | undefined {
@@ -293,6 +300,21 @@ function checkTransition(
       'advance-step-size',
       `${previous.clock.tick} -> ${next.clock.tick}`,
     );
+  if (previous.status === 'running' && next.status === 'decision' && next.activeEvent) {
+    const previousDecisionTick = tracker.decisionTicks.at(-1);
+    if (previousDecisionTick !== undefined) {
+      const spacing = next.clock.tick - previousDecisionTick;
+      const minimumSpacing = Math.ceil(next.config.ticksPerDay * 0.75);
+      if (next.config.mode === 'production' && spacing < minimumSpacing)
+        recordFailure(
+          tracker,
+          next,
+          'decision-spacing',
+          `${spacing} < production minimum ${minimumSpacing} ticks`,
+        );
+    }
+    tracker.decisionTicks.push(next.clock.tick);
+  }
   if (
     (previous.status === 'decision' || previous.status === 'event-result') &&
     next.clock.tick !== previous.clock.tick
@@ -562,6 +584,7 @@ function checkInvariants(state: GameState, tracker: RunTracker, countRunningStep
       effect.dueTick > state.config.rescueTick
     )
       fail('effect-timing', `${effect.id} due=${effect.dueTick}`);
+    if (!effect.sourceChoiceId) fail('effect-provenance', `${effect.id} has no source choice`);
   }
 
   if (countRunningStep && state.status === 'running') {
@@ -597,6 +620,7 @@ function createTracker(state: GameState): RunTracker {
     failures: [],
     failureKeys: new Set(),
     commandTrace: [],
+    decisionTicks: [],
   };
   for (const id of RESOURCE_IDS) minResources[id] = state.resources[id];
   for (const id of SOURCE_IDS) minSources[id] = state.island.sourceStates[id].available;
@@ -706,6 +730,20 @@ function runOnce(seed: string, mode: GameMode): SimulationResult {
       `${state.clock.tick} > ${state.config.rescueTick}`,
     );
   checkInvariants(state, tracker, false);
+  if (
+    mode === 'production' &&
+    (state.metrics.interactiveEventCount < 8 || state.metrics.interactiveEventCount > 10)
+  )
+    recordFailure(
+      tracker,
+      state,
+      'decision-count',
+      `${state.metrics.interactiveEventCount} decisions outside production target 8-10`,
+    );
+
+  const decisionSpacings = tracker.decisionTicks
+    .slice(1)
+    .map((tick, index) => tick - tracker.decisionTicks[index]!);
 
   const snapshot = createSnapshot(state);
   const serialized = JSON.stringify(snapshot);
@@ -724,6 +762,7 @@ function runOnce(seed: string, mode: GameMode): SimulationResult {
     survivorCount: snapshot.survivors.length,
     aliveCount: snapshot.survivors.filter((survivor) => survivor.alive).length,
     eventCount: snapshot.metrics.interactiveEventCount,
+    minDecisionSpacingTicks: decisionSpacings.length ? Math.min(...decisionSpacings) : null,
     maxDecisionGapTicks: snapshot.metrics.maxDecisionGapTicks,
     taskReasonCounts: { ...snapshot.metrics.taskReasonCounts },
     priorityUsage: { ...tracker.priorityUsage },

@@ -605,12 +605,36 @@ function targetsForEffect(
 ): SurvivorState[] {
   const living = state.survivors.filter((value) => value.alive);
   if (effect.targetScope === 'group') return living;
-  return participantIds
+  const participants = participantIds
     .map((id) => state.survivors.find((value) => value.id === id))
-    .filter((value): value is SurvivorState => !!value?.alive)
-    .slice(0, 1)
-    .concat(participantIds.length ? [] : living.slice(0, 1));
+    .filter((value): value is SurvivorState => !!value?.alive);
+  return participantIds.length ? participants : living.slice(0, 1);
 }
+
+function participantBoundEffect(
+  effect: EffectData,
+  participantIds: readonly string[] | undefined,
+): boolean {
+  return (
+    (effect.kind === 'health' ||
+      effect.kind === 'need' ||
+      effect.kind === 'morale' ||
+      effect.kind === 'injury') &&
+    effect.targetScope !== 'group' &&
+    participantIds !== undefined &&
+    participantIds.length > 0
+  );
+}
+
+function hasLivingOriginalParticipant(
+  state: GameState,
+  participantIds: readonly string[],
+): boolean {
+  return participantIds.some((id) =>
+    state.survivors.some((survivor) => survivor.id === id && survivor.alive),
+  );
+}
+
 function applyEffect(
   state: GameState,
   effect: EffectData,
@@ -674,10 +698,23 @@ function participantsFor(state: GameState, event: EventDefinition): string[] | n
 function eligibleEvent(state: GameState, event: EventDefinition): boolean {
   if (
     event.earliestTick > state.clock.tick ||
-    (!event.repeatable && state.eventSchedule.usedEventIds.includes(event.id))
+    (!event.repeatable &&
+      (state.eventSchedule.usedEventIds.includes(event.id) ||
+        state.choiceRecords.some((record) => record.eventId === event.id)))
   )
     return false;
   if (event.phases && !event.phases.includes(deriveRunPhase(state.clock.day))) return false;
+  const lastOccurrence = state.choiceRecords.reduce<number | null>(
+    (latest, record) =>
+      record.eventId === event.id ? Math.max(latest ?? record.tick, record.tick) : latest,
+    null,
+  );
+  if (
+    lastOccurrence !== null &&
+    event.cooldownDays !== undefined &&
+    state.clock.tick < lastOccurrence + Math.floor(event.cooldownDays * state.config.ticksPerDay)
+  )
+    return false;
   if (event.requiresResource && state.resources[event.requiresResource] <= 0) return false;
   if (
     event.requiresPriorChoice &&
@@ -692,12 +729,18 @@ function eligibleEvent(state: GameState, event: EventDefinition): boolean {
   return participantsFor(state, event) !== null;
 }
 
+function selectionWeight(state: GameState, event: EventDefinition): number {
+  return event.phaseWeights?.[deriveRunPhase(state.clock.day)] ?? event.weight ?? 1;
+}
+
 function unusedProductionRoots(state: GameState): readonly EventDefinition[] {
   const productionEvents: readonly EventDefinition[] = PRODUCTION_EVENT_DEFINITIONS;
   return productionEvents.filter(
     (event) =>
       event.category !== 'follow-up' &&
-      (event.repeatable || !state.eventSchedule.usedEventIds.includes(event.id)),
+      (event.repeatable ||
+        (!state.eventSchedule.usedEventIds.includes(event.id) &&
+          !state.choiceRecords.some((record) => record.eventId === event.id))),
   );
 }
 
@@ -720,14 +763,46 @@ function nextRelevantPhaseBoundaryTick(state: GameState): number | null {
   return candidates.length ? Math.min(...candidates) : null;
 }
 
+function nextCooldownExpiryTick(state: GameState): number | null {
+  const candidates = unusedProductionRoots(state)
+    .filter((event) => event.cooldownDays !== undefined)
+    .map((event) => {
+      const lastOccurrence = state.choiceRecords.reduce<number | null>(
+        (latest, record) =>
+          record.eventId === event.id ? Math.max(latest ?? record.tick, record.tick) : latest,
+        null,
+      );
+      return lastOccurrence === null
+        ? null
+        : lastOccurrence + Math.floor(event.cooldownDays! * state.config.ticksPerDay);
+    })
+    .filter((tick): tick is number => tick !== null && tick > state.clock.tick);
+  return candidates.length ? Math.min(...candidates) : null;
+}
+
+function regularEventSpacingTicks(state: GameState): number {
+  return state.config.mode === 'slice'
+    ? Math.floor(state.config.rescueTick * TUNING.eventSpacingFraction)
+    : Math.floor(state.config.ticksPerDay * TUNING.productionEventSpacingDays);
+}
+
+function earliestRegularEventTick(state: GameState): number {
+  const previous = state.metrics.lastDecisionTick;
+  return previous === null ? state.clock.tick : previous + regularEventSpacingTicks(state);
+}
+
 function scheduleProductionRetry(state: GameState): void {
   if (!hasPotentialFutureEvent(state)) {
     state.eventSchedule.nextEventTick = null;
     return;
   }
   const candidates = [
-    state.clock.tick + Math.floor(state.config.ticksPerDay / 4),
+    Math.max(
+      state.clock.tick + Math.floor(state.config.ticksPerDay / 4),
+      earliestRegularEventTick(state),
+    ),
     nextRelevantPhaseBoundaryTick(state),
+    nextCooldownExpiryTick(state),
     state.metrics.lastDecisionTick === null
       ? null
       : state.metrics.lastDecisionTick +
@@ -745,6 +820,17 @@ function activateEvent(state: GameState): void {
     state.clock.tick < state.eventSchedule.nextEventTick
   )
     return;
+  if (state.config.mode === 'production' && state.clock.tick < earliestRegularEventTick(state)) {
+    state.eventSchedule.nextEventTick = earliestRegularEventTick(state);
+    return;
+  }
+  if (
+    state.config.mode === 'production' &&
+    state.metrics.interactiveEventCount >= TUNING.productionEventDecisionCap
+  ) {
+    state.eventSchedule.nextEventTick = null;
+    return;
+  }
   const registry = eventRegistryForMode(state.config.mode);
   let selected: EventDefinition | undefined;
   if (state.config.mode === 'production') {
@@ -761,11 +847,16 @@ function activateEvent(state: GameState): void {
     }
   }
   const eligible = registry.filter(
-    (event) => eligibleEvent(state, event) && event.category !== 'follow-up',
+    (event) =>
+      eligibleEvent(state, event) &&
+      event.category !== 'follow-up' &&
+      selectionWeight(state, event) > 0,
   );
   if (!selected && eligible.length) {
     const random = new DeterministicRandom(state.rngStates.eventSelection);
-    selected = random.pickWeighted(eligible.map((value) => ({ value, weight: value.weight ?? 1 })));
+    selected = random.pickWeighted(
+      eligible.map((value) => ({ value, weight: selectionWeight(state, value) })),
+    );
     state.rngStates.eventSelection = random.exportState();
   }
   if (!selected) {
@@ -925,7 +1016,22 @@ export function advanceStep(state: GameState): GameState {
     (effect) => effect.dueTick > next.clock.tick,
   );
   for (const effect of due) {
-    applyEffect(next, effect.effect, effect.participantIds);
+    const participantIds = effect.participantIds;
+    if (
+      participantBoundEffect(effect.effect, participantIds) &&
+      !hasLivingOriginalParticipant(next, participantIds!)
+    ) {
+      const source = effect.sourceChoiceId
+        ? `${effect.sourceEventId}/${effect.sourceChoiceId}`
+        : `${effect.sourceEventId}`;
+      addHistory(
+        next,
+        'effect',
+        `Delayed effect ${source} discarded: no original participant remained alive.`,
+      );
+      continue;
+    }
+    applyEffect(next, effect.effect, participantIds);
     addHistory(next, 'effect', effect.description);
   }
   for (const survivor of next.survivors) {
@@ -996,6 +1102,7 @@ function selectEventChoice(state: GameState, eventId: EventId, choiceId: string)
         id: `effect-${next.eventSchedule.sequence}`,
         dueTick,
         sourceEventId: eventId,
+        sourceChoiceId: choice.id,
         participantIds: [...participantIds],
         effect: { ...choice.delayedEffect.effect },
         description: choice.delayedEffect.description,
@@ -1042,16 +1149,15 @@ export function applyCommand(state: GameState, command: GameCommand): CommandRes
       return { state, accepted: false, reason: 'event-id-mismatch' };
     const next = copyState(state);
     const activeId = next.activeEvent!.id;
-    next.eventSchedule.usedEventIds.push(activeId);
-    const spacing =
-      next.config.mode === 'slice'
-        ? Math.floor(next.config.rescueTick * TUNING.eventSpacingFraction)
-        : Math.floor(next.config.ticksPerDay * TUNING.productionEventSpacingDays);
+    if (!next.eventSchedule.usedEventIds.includes(activeId))
+      next.eventSchedule.usedEventIds.push(activeId);
+    const spacing = regularEventSpacingTicks(next);
     const candidate = next.clock.tick + spacing;
     const hasMore =
       next.config.mode === 'slice'
         ? next.eventSchedule.usedEventIds.length < eventRegistryForMode('slice').length
-        : hasPotentialFutureEvent(next);
+        : next.metrics.interactiveEventCount < TUNING.productionEventDecisionCap &&
+          hasPotentialFutureEvent(next);
     next.eventSchedule.nextEventTick =
       hasMore && candidate < next.config.rescueTick ? candidate : null;
     next.activeEvent = null;
