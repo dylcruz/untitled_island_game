@@ -264,7 +264,7 @@ milestone completes and tunes the final content pool.
   resources, events, gaps, task reasons, invariants, command traces, and endings.
 - [x] Add the final concise aggregate console report, death analysis, and
   release-batch reporting required by the completed policy matrix.
-- [ ] Run leave-one-event-template-out sensitivity batches.
+- [x] Run leave-one-event-template-out sensitivity batches.
 - [x] Tune the conservative policy to the documented provisional rescue ranges.
 - [x] Verify zero initial-state and simulation-invariant failures under every
   policy.
@@ -276,7 +276,10 @@ milestone completes and tunes the final content pool.
   all-survivor for the conservative policy, with zero invariant failures and
   full decision/gap compliance under all three policies. Release artifact
   SHA-256: `8cb2acd36b19b948fb39885b8cd4b9f90e8947e2dcf7053de102f42fb24e2189`.
-  Full 10,000-seed sensitivity remains open.
+  The final 10,000-seed sensitivity batch passed all 14 scenarios with a
+  3.0-point worst exclusion delta, zero invariant failures, and full
+  decision/gap compliance. Sensitivity artifact SHA-256:
+  `d498a5e640d0074f382858418b6bb99d726eb6f8cb30c29d45dd5dd95479222b`.
 - [ ] Run the documented ten-run human timing sample and meet the 15–25 minute
   criteria.
 - [ ] Profile Canvas, React snapshot cadence, memory, and input responsiveness on
