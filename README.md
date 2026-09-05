@@ -1,20 +1,47 @@
 # Untitled Island
 
-A deterministic browser survival game about three autonomous survivors waiting
-14 in-game days for rescue. Players control time, choose a daily camp priority,
-and respond to events while managing supplies, shelter, injuries, and morale.
+Can your camp hold together until rescue? Untitled Island is a short,
+replayable browser survival story about three autonomous survivors stranded on
+an island. You control the pace, set the camp's daily priority, and make the
+decisions that shape a 14-day run.
 
-The current build is the Milestone 5 balance and release-candidate
-implementation. It includes the production event system, deterministic
-headless policies, machine-readable simulation reports, versioned save/resume,
-seeded presentation, and Chromium browser coverage. Automated implementation
-checks are in place; release is not complete. Blind and final-content
-playtesting, timing, representative-hardware performance, and the full browser
-and device matrix remain external gates.
+## Play the loop
+
+Start or resume a seeded expedition, read the camp's current pressures, and
+choose how the group should spend its effort. Survivors then travel the island
+on their own to gather supplies, repair shelter, rest, or recover. Time moves
+through day and night until an event pauses the run. Choose a response, read
+the immediate result, and continue until rescue or defeat.
+
+The current production build includes:
+
+- Three distinct survivors with needs, traits, morale, injuries, and
+  autonomous activities.
+- Five camp priorities—Balanced, Secure water, Find food, Build and repair,
+  and Recover—with at most one successful change per in-game day.
+- Thirteen authored event templates, including two interactive follow-ups,
+  with visible risk, cost, impact, and result context.
+- One authored island with six fixed waypoints and four seeded,
+  cosmetic-only scenery variants.
+- Seeded setup, guarded local save/resume, ending summaries, and restart with
+  the same or a new seed.
+- No backend, cloud save, or telemetry. Runtime timing stays on the device.
+
+For architecture and the remaining MVP work, see
+[`docs/architecture.md`](docs/architecture.md) and
+[`docs/mvp_todo.md`](docs/mvp_todo.md).
+
+## Current status
+
+The automated release-candidate scope is complete. The remaining release
+gates are external: human timing, blind and final-content playtests,
+representative desktop/mobile hardware performance, the full browser/device
+matrix, the manual acceptance matrix, and final release signoff. Automated
+results do not close those gates or claim a finished release.
 
 ## Run locally
 
-Use Node.js 24 (Active LTS) and npm. The repository pins the major version in
+Use Node.js 24 and npm. The repository pins the Node major version in
 [`.nvmrc`](.nvmrc); with nvm, run `nvm use` before installing dependencies.
 
 ```sh
@@ -22,18 +49,41 @@ npm ci
 npm run dev
 ```
 
-Open the local URL printed by Vite, normally <http://localhost:5173/>. Choose
-**Begin**, use the `0x`, `1x`, `3x`, and `8x` controls to manage time, and change
-the camp priority at most once per in-game day. Event decisions pause the
-simulation until a choice is resolved and acknowledged.
+Open the local URL printed by Vite, normally
+<http://localhost:5173/>. The setup screen lets you begin, enter or copy a
+seed, resume a compatible local checkpoint, or confirm a replacement run.
 
-For the shortened internal regression game, open
-<http://localhost:5173/?mode=slice>. It is a test path, not a player-facing
-configuration.
+### Gameplay controls
 
-## Development checks
+- `0x` pauses; `1x` is normal speed; `3x` and `8x` accelerate the fixed-step
+  simulation.
+- Choose one camp priority and change it at most once per in-game day. The
+  priority guides the group; survivors still handle their own urgent needs
+  and nighttime schedule.
+- Event decisions pause time. Choose a response, acknowledge its result, and
+  continue.
+- Use the semantic controls with a mouse, touch, or keyboard.
 
-The standard local verification ladder is:
+The shortened `?mode=slice` view is developer-only regression coverage, not a
+player-facing game mode. It is available at
+<http://localhost:5173/?mode=slice> during local development.
+
+Runs are deterministic only when the rules/configuration and seed are the
+same, and the same commands are applied at the same simulation ticks. Core
+transitions at a given tick are independent of rendering and viewport size, but
+live speed, frame stalls, visibility changes, and input timing can change which
+tick receives a command; different command ticks can change the outcome.
+
+## Developer checks
+
+Install Chromium before browser checks:
+
+```sh
+npx playwright install --with-deps chromium
+```
+
+The repository's scripts are defined in [`package.json`](package.json). A
+local verification ladder is:
 
 ```sh
 npm run typecheck
@@ -45,51 +95,49 @@ npm run simulate:ci
 npm run test:e2e:short
 ```
 
-The GitHub Actions workflow runs this same typecheck, lint, format check, unit
-test, production build, deterministic simulation, and short browser suite on
-pushes and pull requests. CI installs Chromium and covers the configured
-Chromium Desktop Chrome and emulated Pixel 7 projects. It does not claim
-Firefox, WebKit/Safari, or physical-device coverage.
+`npm run format` runs Prettier in check mode (`prettier --check .`); it reports
+formatting drift and does not rewrite files. To run the configured full
+Playwright suite locally, use `npm run test:e2e`.
 
-## Headless simulation modes
+CI runs on Node.js 24 after `npm ci` and Chromium installation. It checks
+typechecking, linting, formatting, unit tests, the production build, a
+one-seed all-policy simulation matrix, and the short Playwright suite on
+Chromium Desktop Chrome and emulated Pixel 7. It does not claim Firefox,
+WebKit/Safari, or physical-device coverage.
 
-`npm run simulate` keeps the legacy single-run interface. The M5 runner also
-accepts `--batch=matrix`, `--batch=release`, and `--batch=sensitivity`:
+## Headless simulation
+
+The simulation runner prints a machine-readable JSON report to stdout and a
+short defeat/invariant summary to stderr. Reports include policy and version,
+seeds, scenarios, rescue and ending rates, resources, events, decision gaps,
+and invariant failures. The matrix uses conservative, resource-greedy, and
+random-fuzz policies; reports retain policy IDs, versions, and failure traces.
+Invariant failures and invalid CLI arguments produce a nonzero exit status.
 
 ```sh
-# Small, deterministic all-policy invariant batch (used by CI).
+# Local prefix-seed batch (10 runs).
+npm run simulate -- --runs=10 --seed=local-check
+
+# CI-sized, one-seed matrix across all named policies.
 npm run simulate:ci
 
-# Checked-in 10,000-seed manifest under every named policy (expensive).
+# Checked-in 10,000-seed manifest across all named policies (expensive).
 npm run simulate:release
 
-# Leave-one-event-template-out sensitivity batch (expensive).
+# Baseline plus leave-one-event-template-out scenarios (expensive).
 npm run simulate:sensitivity
-
-# Single run, or an explicit legacy batch.
-npm run simulate -- --runs=10 --seed=local-check
 ```
 
-The matrix uses the conservative, resource-greedy, and deterministic
-random/fuzz policies. Policy-owned random streams are separate from game RNG
-streams. Reports include seeds, policy IDs and versions, traces for failed
-runs, resources, events, decision gaps, endings, and invariant failures. A
-nonzero exit status is used for invariant failures (and invalid CLI arguments).
-Release and sensitivity commands are documented for manual or scheduled
-validation and are deliberately not part of pull-request CI.
+The release and sensitivity batches are separate manual or scheduled
+validation; they are deliberately outside pull-request CI.
 
-## Open release gates
+## Repository map
 
-The following require external evidence and are not implied by automated CI:
-
-- the required blind playtests and final-content playtest revisit;
-- the ten-run human timing sample and its 15–25 minute target;
-- Canvas, React, memory, and input performance on representative desktop and
-  mobile hardware;
-- current Chrome/Edge, Firefox, Safari/WebKit, iOS Safari, and Android Chrome
-  validation; and
-- the full manual matrix of seeds, policies, risk styles, speeds, visibility,
-  saves, endings, restart, mouse, keyboard, and touch.
-
-No release completion or balance-target signoff is claimed until those gates
-have been run and recorded.
+- `src/game/` — pure simulation, island, traits, events, endings, and rules.
+- `src/runtime/` — fixed-step loop, speed/pause handling, visibility, and
+  checkpoint callbacks.
+- `src/rendering/` — authored Canvas island and survivor presentation.
+- `src/persistence/` — guarded, versioned local save/resume.
+- `src/App.tsx` and `src/styles.css` — browser interface and layout.
+- `scripts/` — headless policies, manifest, and simulation reports.
+- `e2e/` and `src/test/` — browser and simulation tests.
