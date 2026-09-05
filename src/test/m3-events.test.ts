@@ -5,6 +5,7 @@ import {
   createGame,
   PRODUCTION_EVENT_DEFINITIONS,
   RISK_PROBABILITY_RANGES,
+  TUNING,
 } from '../game';
 import type { EffectData, RiskLevel } from '../game';
 import { parseSaveEnvelope, serializeSave } from '../persistence';
@@ -100,6 +101,45 @@ describe('M3 event content and authoritative scheduling', () => {
     );
   });
 
+  it('does not persist an unreachable follow-up at the production decision cap', () => {
+    let state = createGame('m5-follow-up-cap');
+    clearTasks(state);
+    state.clock.tick = 5_000;
+    state.clock.day = Math.floor(state.clock.tick / state.config.ticksPerDay) + 1;
+    state.eventSchedule.nextEventTick = null;
+    state.metrics.interactiveEventCount = TUNING.productionEventDecisionCap;
+    state.metrics.lastDecisionTick = state.clock.tick;
+    state.eventSchedule.lastDecisionTick = state.clock.tick;
+    state.status = 'decision';
+    state.activeEvent = {
+      id: 'freshwater-seep',
+      activatedTick: state.clock.tick,
+      participantIds: [state.survivors[0]!.id],
+      chosenChoiceId: null,
+      result: null,
+    };
+
+    state = applyCommand(state, {
+      type: 'select-event-choice',
+      eventId: 'freshwater-seep',
+      choiceId: 'mark-source',
+    }).state;
+    expect(state.eventSchedule.pendingFollowUps).toEqual([]);
+    expect(parseSaveEnvelope(serializeSave(state)).ok).toBe(true);
+
+    state = applyCommand(state, {
+      type: 'acknowledge-event-result',
+      eventId: 'freshwater-seep',
+    }).state;
+    expect(state.eventSchedule.nextEventTick).toBeNull();
+    expect(state.eventSchedule.pendingFollowUps).toEqual([]);
+    state.clock.tick = 5_399;
+    state.clock.day = Math.floor(state.clock.tick / state.config.ticksPerDay) + 1;
+    state = advanceStep(state);
+    expect(state.clock.tick).toBe(5_400);
+    expect(parseSaveEnvelope(serializeSave(state)).ok).toBe(true);
+  });
+
   it('applies participant effects to every surviving original and preserves global effects', () => {
     let state = createGame('m3-participant-targets');
     clearTasks(state);
@@ -190,6 +230,6 @@ describe('M3 event content and authoritative scheduling', () => {
     expect(restored.ok).toBe(true);
     if (!restored.ok) return;
     expect(JSON.parse(JSON.stringify(restored.state))).toEqual(restored.state);
-    expect(restored.state.config.rulesVersion).toBe('m3-events-1');
+    expect(restored.state.config.rulesVersion).toBe('m5-balance-1');
   });
 });

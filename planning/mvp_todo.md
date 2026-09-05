@@ -5,7 +5,11 @@ current implementation path. Milestones 0 and 1 are complete. Milestone 2's
 software implementation and automated verification are complete; its required
 five-person blind-playtest gate remains open. Milestone 3's verified software
 scope is complete; final content playtesting and release validation remain open.
-Milestone 4 implementation is active on `feature/milestone-4-browser-experience`.
+Milestone 4 is complete. Milestone 5's automated implementation and configured
+browser verification are complete on
+`feature/milestone-5-balance-release-candidate`; its human timing, physical
+device, cross-browser, performance, manual-play, and final playtest gates remain
+open.
 
 ## Current Baseline
 
@@ -249,21 +253,39 @@ milestone completes and tunes the final content pool.
 
 ## Milestone 5: Balance And Release Candidate
 
+- [x] Present hunger and thirst as remaining percentages that decrease from
+  100, while preserving the authoritative internal need-pressure model.
+- [x] Replace player-facing raw step/tick durations with 12-hour clock time.
 - [x] Implement the versioned deterministic M2 conservative headless policy.
-- [ ] Add resource-greedy and deterministic random/fuzz policies using
+- [x] Add resource-greedy and deterministic random/fuzz policies using
   policy-owned RNG streams.
-- [ ] Check in a stable manifest of 10,000 seeds and retain it across tuning
+- [x] Check in a stable manifest of 10,000 seeds and retain it across tuning
   changes.
-- [ ] Record game seed, policy ID/version/seed, and command trace for every
+- [x] Record game seed, policy ID/version/seed, and command trace for every
   invariant failure or failed run.
 - [x] Produce machine-readable JSON for production/slice results, policy use,
   resources, events, gaps, task reasons, invariants, command traces, and endings.
-- [ ] Add the final concise aggregate console report, death analysis, and
+- [x] Add the final concise aggregate console report, death analysis, and
   release-batch reporting required by the completed policy matrix.
-- [ ] Run leave-one-event-template-out sensitivity batches.
-- [ ] Tune the conservative policy to the documented provisional rescue ranges.
-- [ ] Verify zero initial-state and simulation-invariant failures under every
+- [x] Run leave-one-event-template-out sensitivity batches.
+- [x] Tune the conservative policy to the documented provisional rescue ranges.
+- [x] Verify zero initial-state and simulation-invariant failures under every
   policy.
+- Verification checkpoint (`c39ede9`): independent 1,000-seed sensitivity
+  passed at 86.5% rescue / 42.9% all-survivor with a 3.8-point worst exclusion
+  delta, zero invariant failures, and full decision/gap compliance. A distinct
+  1,000-seed three-policy matrix also passed with deterministic repeat output.
+  The final 10,000-seed manifest release then passed at 85.27% rescue / 42.19%
+  all-survivor for the conservative policy, with zero invariant failures and
+  full decision/gap compliance under all three policies. Release artifact
+  SHA-256: `8cb2acd36b19b948fb39885b8cd4b9f90e8947e2dcf7053de102f42fb24e2189`.
+  The final 10,000-seed sensitivity batch passed all 14 scenarios with a
+  3.0-point worst exclusion delta, zero invariant failures, and full
+  decision/gap compliance. Sensitivity artifact SHA-256:
+  `d498a5e640d0074f382858418b6bb99d726eb6f8cb30c29d45dd5dd95479222b`.
+  Final configured Playwright verification passed 41 tests with one intentional
+  skip across Desktop Chrome and Pixel 7 projects; typecheck, lint, formatting,
+  100 unit tests, production build, and the CI simulation also passed.
 - [ ] Run the documented ten-run human timing sample and meet the 15–25 minute
   criteria.
 - [ ] Profile Canvas, React snapshot cadence, memory, and input responsiveness on
@@ -272,7 +294,7 @@ milestone completes and tunes the final content pool.
   Android Chrome environments.
 - [ ] Run the full manual matrix covering seeds, policies, risk styles, speeds,
   visibility, saves, endings, restart, mouse, keyboard, and touch.
-- [ ] Configure CI to run typecheck, lint, unit tests, production build, a small
+- [x] Configure CI to run typecheck, lint, unit tests, production build, a small
   deterministic invariant batch, and the short Playwright suite.
 - [ ] Re-run every MVP acceptance criterion and record release evidence.
 
@@ -290,7 +312,7 @@ support is still needed:
   server.
 - [x] Run `npm run test:e2e` after Chromium is installed to close the outstanding
   Milestone 0 browser gate.
-- [ ] Use a supported active Node.js LTS installation for repeatable development
+- [x] Use a supported active Node.js LTS installation for repeatable development
   and CI, and add a repository version pin (`.nvmrc`, Volta, or equivalent) once
   the team selects the exact LTS release.
 

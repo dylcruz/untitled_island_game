@@ -16,6 +16,20 @@ test('presents the authored island, distinct survivor portraits, and production 
 
   await expect(page.getByTestId('survivor-card')).toHaveCount(3);
   await expect(page.getByTestId('survivor-portrait')).toHaveCount(3);
+  await expect(page.locator('meter[aria-label^="Hunger: "]')).toHaveCount(3);
+  await expect(page.locator('meter[aria-label^="Thirst: "]')).toHaveCount(3);
+  expect(
+    await page
+      .locator('meter[aria-label^="Hunger: "]')
+      .evaluateAll((meters) => meters.every((meter) => Number(meter.getAttribute('value')) >= 80)),
+  ).toBe(true);
+  expect(
+    await page
+      .locator('meter[aria-label^="Thirst: "]')
+      .evaluateAll((meters) => meters.every((meter) => Number(meter.getAttribute('value')) >= 80)),
+  ).toBe(true);
+  await expect(page.getByTestId('time-status')).toContainText(/AM|PM/);
+  await expect(page.getByTestId('time-status')).not.toContainText(/\b(step|ticks?)\b/i);
   const portraitVariants = await page
     .getByTestId('survivor-portrait')
     .evaluateAll((portraits) =>

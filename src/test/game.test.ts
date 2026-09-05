@@ -3,6 +3,7 @@ import { createIslandState } from '../game/island';
 import { DeterministicRandom, RANDOM_STREAM_NAMES, createRandomStreamStates } from '../game/random';
 import { advanceStep, applyCommand, createGame, createSnapshot } from '../game/simulation';
 import { EVENT_BY_ID } from '../game/events';
+import { SLICE_GAME_CONFIG } from '../game/tuning';
 import type { GameState } from '../game/types';
 
 describe('M0 deterministic game core', () => {
@@ -53,7 +54,7 @@ describe('M0 deterministic game core', () => {
   });
 
   it('reaches rescue at the configured terminal tick', () => {
-    let state = createGame('rescue-seed');
+    let state = createGame({ ...SLICE_GAME_CONFIG, seed: 'rescue-seed' });
     while (state.status !== 'victory' && state.status !== 'defeat') {
       if (state.status === 'running') state = advanceStep(state);
       else if (state.status === 'decision') {
@@ -73,7 +74,7 @@ describe('M0 deterministic game core', () => {
 
     expect(state.status).toBe('victory');
     expect(state.clock.tick).toBe(state.config.rescueTick);
-    expect(state.clock.day).toBe(14);
+    expect(state.clock.day).toBe(3);
     expect(state.survivors.every((survivor) => survivor.alive)).toBe(true);
   });
 

@@ -5,36 +5,35 @@ import {
   createSnapshot,
   deriveEndingSummary,
   EVENT_BY_ID,
+  PRODUCTION_EVENT_DEFINITIONS,
   SLICE_GAME_CONFIG,
   TUNING,
 } from '../src/game/index';
 import type {
   CampPriority,
   ChoiceId,
+  EffectData,
   EventId,
   GameCommand,
   GameMode,
   GameState,
+  ProductionEventId,
   ResourceId,
   SourceId,
   TaskKind,
   TaskReasonCode,
   WaypointId,
 } from '../src/game/index';
+import { loadReleaseManifest } from './simulation/manifest';
+import { createPolicy, POLICY_IDS } from './simulation/policies';
+import type { PolicyId } from './simulation/policies';
 
 const DEFAULT_RUNS = 10;
 const DEFAULT_SEED = 'm2-headless';
-const POLICY_ID = 'm3-conservative';
-const POLICY_VERSION = 'm3';
-const SLICE_POLICY_ID = 'm1-slice-first-choice';
-const SLICE_POLICY_VERSION = 'm1';
-
-// At 100 ms fixed steps this is a 12-second planner hand-off budget (one fifth
-// of a production day). The slice completes with a shorter idle interval.
 const MAX_TASKLESS_RUNNING_STEPS = 180;
-const RESOURCE_IDS: readonly ResourceId[] = ['water', 'food', 'materials'];
-const SOURCE_IDS: readonly SourceId[] = ['water', 'forage', 'wreckage', 'forest'];
-const WAYPOINT_IDS: readonly WaypointId[] = [
+const RESOURCES: readonly ResourceId[] = ['water', 'food', 'materials'];
+const SOURCES: readonly SourceId[] = ['water', 'forage', 'wreckage', 'forest'];
+const WAYPOINTS: readonly WaypointId[] = [
   'camp',
   'water',
   'forage',
@@ -52,7 +51,7 @@ const TASK_KINDS: readonly TaskKind[] = [
   'gather-materials',
   'repair-shelter',
 ];
-const TASK_REASON_CODES: readonly TaskReasonCode[] = [
+const TASK_REASONS: readonly TaskReasonCode[] = [
   'critical-thirst',
   'critical-hunger',
   'critical-health',
@@ -64,32 +63,16 @@ const TASK_REASON_CODES: readonly TaskReasonCode[] = [
   'stock-materials',
   'repair-shelter',
 ];
+const EVENT_IDS = PRODUCTION_EVENT_DEFINITIONS.map((event) => event.id);
+type BatchMode = 'single' | 'matrix' | 'release' | 'sensitivity';
 
-/** Stable event choices are part of the headless policy, not random input. */
-const CONSERVATIVE_EVENT_CHOICES: Readonly<Partial<Record<EventId, ChoiceId>>> = {
-  'tide-pools': 'harvest',
-  'interior-signal': 'turn-back',
-  'water-dispute': 'hear-them-out',
-  'fallen-palm': 'move-on',
-  'leaking-roof': 'patch',
-  'forager-instinct': 'trust-instinct',
-  'smoke-on-horizon': 'conserve',
-  'signal-answer': 'save-fuel',
-  'freshwater-seep': 'mark-source',
-  'seep-follow-up': 'collect-carefully',
-  'storm-front': 'wait-it-out',
-  'driftwood-cache': 'leave-wood',
-  'night-watch': 'sleep-safe',
-};
-
-interface InvariantFailure {
+interface Failure {
   code: string;
   detail: string;
   tick: number;
   status: GameState['status'];
 }
-
-interface CommandTraceEntry {
+interface Trace {
   tick: number;
   day: number;
   type: GameCommand['type'];
@@ -99,11 +82,31 @@ interface CommandTraceEntry {
   accepted: boolean;
   reason?: string;
 }
-
-interface SimulationResult {
+interface Death {
+  survivorId: string;
+  day: number;
+  tick: number;
+  causes: string[];
+}
+interface Frequencies {
+  priorities: Record<string, number>;
+  rootEvents: Record<string, number>;
+  followUps: Record<string, number>;
+  automaticEffects: Record<string, number>;
+  choices: Record<string, number>;
+  taskReasons: Record<string, number>;
+  damageByEvent: Record<string, number>;
+  resourceLossByEvent: Record<string, number>;
+}
+interface Result {
   seed: string;
+  gameSeed: string;
   policy: string;
+  policyId: string;
   version: string;
+  policyVersion: string;
+  policySeed: string;
+  excludedEventId: ProductionEventId | null;
   mode: GameMode;
   status: GameState['status'];
   tick: number;
@@ -113,264 +116,174 @@ interface SimulationResult {
   eventCount: number;
   minDecisionSpacingTicks: number | null;
   maxDecisionGapTicks: number;
-  taskReasonCounts: Partial<Record<TaskReasonCode, number>>;
+  decisionCompliance: boolean;
+  gapCompliance: boolean;
+  taskReasonCounts: Record<string, number>;
   priorityUsage: Record<CampPriority, number>;
+  frequencies: Frequencies;
+  deaths: Death[];
   maxTasklessRunningSteps: number;
   endingQuality: ReturnType<typeof deriveEndingSummary>['quality'] | null;
   minResources: Record<ResourceId, number>;
   minSources: Record<SourceId, number>;
-  invariantFailures: InvariantFailure[];
+  initialInvariantFailures: Failure[];
+  invariantFailures: Failure[];
   serializedStateBytes: number;
-  commandTrace: CommandTraceEntry[];
+  commandTrace: Trace[];
 }
-
-interface RunTracker {
+interface Tracker {
   expectedSurvivorIds: readonly string[];
-  tasklessSteps: Map<string, number>;
-  maxTasklessSteps: number;
   minResources: Record<ResourceId, number>;
   minSources: Record<SourceId, number>;
   priorityUsage: Record<CampPriority, number>;
-  failures: InvariantFailure[];
+  taskless: Map<string, number>;
+  maxTaskless: number;
   failureKeys: Set<string>;
-  commandTrace: CommandTraceEntry[];
+  failures: Failure[];
+  initialFailures: Failure[];
+  trace: Trace[];
   decisionTicks: number[];
+  deaths: Death[];
+  frequencies: Frequencies;
 }
 
-function parseArgument(name: string): string | undefined {
+const arg = (name: string): string | undefined => {
   const prefix = `${name}=`;
-  const value = process.argv.slice(2).find((argument) => argument.startsWith(prefix));
-  return value?.slice(prefix.length);
+  return process.argv
+    .slice(2)
+    .find((value) => value.startsWith(prefix))
+    ?.slice(prefix.length);
+};
+const flag = (name: string): boolean => process.argv.slice(2).includes(name);
+function validateArguments(): void {
+  const keys = ['--mode', '--runs', '--seed', '--batch', '--policy', '--exclude-event'];
+  for (const value of process.argv.slice(2)) {
+    if (value === '--sensitivity') continue;
+    if (!keys.some((key) => value.startsWith(`${key}=`)))
+      throw new Error(`unknown argument: ${value}`);
+  }
 }
-
-function parseMode(): GameMode {
-  const value = parseArgument('--mode') ?? 'production';
+function integer(name: string, fallback: number, maximum: number): number {
+  const raw = arg(name);
+  if (raw === undefined) return fallback;
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value < 1 || value > maximum)
+    throw new Error(`${name} must be an integer between 1 and ${maximum}`);
+  return value;
+}
+function mode(): GameMode {
+  const value = arg('--mode') ?? 'production';
   if (value !== 'production' && value !== 'slice')
     throw new Error('--mode must be production or slice');
   return value;
 }
-
-function parseRuns(): number {
-  const value = parseArgument('--runs');
-  if (value === undefined) return DEFAULT_RUNS;
-  const runs = Number(value);
-  if (!Number.isInteger(runs) || runs < 1 || runs > 1000) {
-    throw new Error('--runs must be an integer between 1 and 1000');
-  }
-  return runs;
+function batch(): BatchMode {
+  const value = arg('--batch') ?? (flag('--sensitivity') ? 'sensitivity' : 'single');
+  if (!['single', 'matrix', 'release', 'sensitivity'].includes(value))
+    throw new Error('--batch must be single, matrix, release, or sensitivity');
+  return value as BatchMode;
 }
-
-function emptyPriorityUsage(): Record<CampPriority, number> {
-  return { balanced: 0, water: 0, food: 0, build: 0, recover: 0 };
+function policy(): PolicyId {
+  const value = arg('--policy') ?? 'conservative';
+  if (!POLICY_IDS.includes(value as PolicyId))
+    throw new Error(`--policy must be one of ${POLICY_IDS.join(', ')}`);
+  return value as PolicyId;
 }
-
-function emptyResourceValues(): Record<ResourceId, number> {
-  return { water: 0, food: 0, materials: 0 };
+function emptyFrequencies(): Frequencies {
+  return {
+    priorities: {},
+    rootEvents: {},
+    followUps: {},
+    automaticEffects: {},
+    choices: {},
+    taskReasons: {},
+    damageByEvent: {},
+    resourceLossByEvent: {},
+  };
 }
-
-function emptySourceValues(): Record<SourceId, number> {
+function inc(target: Record<string, number>, key: string, amount = 1): void {
+  target[key] = (target[key] ?? 0) + amount;
+}
+function tracker(state: GameState): Tracker {
+  return {
+    expectedSurvivorIds: state.survivors.map((survivor) => survivor.id),
+    minResources: { ...state.resources },
+    minSources: Object.fromEntries(
+      SOURCES.map((id) => [id, state.island.sourceStates[id].available]),
+    ) as Record<SourceId, number>,
+    priorityUsage: { balanced: 0, water: 0, food: 0, build: 0, recover: 0 },
+    taskless: new Map(state.survivors.map((survivor) => [survivor.id, 0])),
+    maxTaskless: 0,
+    failureKeys: new Set(),
+    failures: [],
+    initialFailures: [],
+    trace: [],
+    decisionTicks: [],
+    deaths: [],
+    frequencies: emptyFrequencies(),
+  };
+}
+function fail(t: Tracker, state: GameState, code: string, detail: string): void {
+  const key = `${code}:${detail}`;
+  if (t.failureKeys.has(key)) return;
+  t.failureKeys.add(key);
+  t.failures.push({ code, detail, tick: state.clock.tick, status: state.status });
+}
+const finite = (value: number): boolean => Number.isFinite(value);
+function sourceValues(): Record<SourceId, number> {
   return { water: 0, forage: 0, wreckage: 0, forest: 0 };
 }
-
-function finite(value: number): boolean {
-  return Number.isFinite(value);
-}
-
-function recordFailure(tracker: RunTracker, state: GameState, code: string, detail: string): void {
-  const key = `${code}:${detail}`;
-  if (tracker.failureKeys.has(key)) return;
-  tracker.failureKeys.add(key);
-  tracker.failures.push({ code, detail, tick: state.clock.tick, status: state.status });
-}
-
-function updateMinimums(state: GameState, tracker: RunTracker): void {
-  for (const id of RESOURCE_IDS) {
-    const value = state.resources[id];
-    if (finite(value)) tracker.minResources[id] = Math.min(tracker.minResources[id]!, value);
-  }
-  for (const id of SOURCE_IDS) {
-    const value = state.island.sourceStates[id].available;
-    if (finite(value)) tracker.minSources[id] = Math.min(tracker.minSources[id]!, value);
-  }
-}
-
-function resourceForSource(sourceId: SourceId): ResourceId {
-  if (sourceId === 'water') return 'water';
-  if (sourceId === 'forage') return 'food';
-  return 'materials';
-}
-
-function incomingResource(state: GameState, resourceId: ResourceId): number {
-  return state.reservations
-    .filter((reservation) => reservation.kind !== 'materials')
-    .filter((reservation) => resourceForSource(reservation.sourceId) === resourceId)
-    .reduce((sum, reservation) => sum + reservation.expectedYield, 0);
-}
-
-function reservedMaterials(state: GameState): number {
-  return state.reservations
-    .filter((reservation) => reservation.kind === 'materials')
-    .reduce((sum, reservation) => sum + (reservation.reservedAmount ?? 0), 0);
-}
-
-function projectedPriority(state: GameState): CampPriority {
-  const living = state.survivors.filter((survivor) => survivor.alive).length;
-  const waterTarget = living * TUNING.planner.targetStockPerSurvivor.water;
-  const foodTarget = living * TUNING.planner.targetStockPerSurvivor.food;
-  if (state.resources.water + incomingResource(state, 'water') < waterTarget) return 'water';
-  if (state.resources.food + incomingResource(state, 'food') < foodTarget) return 'food';
-
-  const freeMaterials = state.resources.materials - reservedMaterials(state);
-  const shelterPoor = state.shelter.condition < TUNING.shelter.poorThreshold;
-  const materialsLow = freeMaterials < TUNING.shelter.repairMaterials;
-  const materialsSupport = freeMaterials >= TUNING.shelter.repairMaterials;
-  if ((shelterPoor && materialsSupport) || materialsLow) return 'build';
-
-  if (
-    state.survivors.some(
-      (survivor) =>
-        survivor.alive &&
-        (survivor.injury !== null || survivor.needs.health < 60 || survivor.needs.energy <= 35),
-    )
-  )
-    return 'recover';
-  return 'balanced';
-}
-
-function fallbackChoice(eventId: EventId): ChoiceId {
-  const choices = EVENT_BY_ID[eventId].choices;
-  const preferred = CONSERVATIVE_EVENT_CHOICES[eventId];
-  if (preferred && choices.some((choice) => choice.id === preferred)) return preferred;
-  return [...choices].sort((left, right) => left.id.localeCompare(right.id))[0]!.id;
-}
-
-function choiceForEvent(state: GameState, mode: GameMode): ChoiceId {
-  const eventId = state.activeEvent!.id;
-  if (mode === 'slice') return EVENT_BY_ID[eventId].choices[0]!.id;
-  return fallbackChoice(eventId);
-}
-
-function appendCommandTrace(
-  tracker: RunTracker,
-  state: GameState,
-  command: GameCommand,
-  accepted: boolean,
-  reason?: string,
-): void {
-  const trace: CommandTraceEntry = {
-    tick: state.clock.tick,
-    day: state.clock.day,
-    type: command.type,
-    accepted,
-  };
-  if (command.type === 'set-camp-priority') trace.priority = command.priority;
-  if (command.type === 'select-event-choice') {
-    trace.eventId = command.eventId;
-    trace.choiceId = command.choiceId;
-  }
-  if (command.type === 'acknowledge-event-result') trace.eventId = command.eventId;
-  if (reason !== undefined) trace.reason = reason;
-  tracker.commandTrace.push(trace);
-}
-
-function checkTransition(
-  previous: GameState,
-  next: GameState,
-  tracker: RunTracker,
-  kind: 'advance' | 'command',
-): void {
-  if (next.clock.tick < previous.clock.tick)
-    recordFailure(
-      tracker,
-      next,
-      'tick-regression',
-      `tick moved ${previous.clock.tick} -> ${next.clock.tick}`,
-    );
-  if (kind === 'command' && next.clock.tick !== previous.clock.tick)
-    recordFailure(
-      tracker,
-      next,
-      'command-advanced-time',
-      `${previous.clock.tick} -> ${next.clock.tick}`,
-    );
-  if (kind === 'advance' && next.clock.tick !== previous.clock.tick + 1)
-    recordFailure(
-      tracker,
-      next,
-      'advance-step-size',
-      `${previous.clock.tick} -> ${next.clock.tick}`,
-    );
-  if (previous.status === 'running' && next.status === 'decision' && next.activeEvent) {
-    const previousDecisionTick = tracker.decisionTicks.at(-1);
-    if (previousDecisionTick !== undefined) {
-      const spacing = next.clock.tick - previousDecisionTick;
-      const minimumSpacing = Math.ceil(next.config.ticksPerDay * 0.75);
-      if (next.config.mode === 'production' && spacing < minimumSpacing)
-        recordFailure(
-          tracker,
-          next,
-          'decision-spacing',
-          `${spacing} < production minimum ${minimumSpacing} ticks`,
-        );
-    }
-    tracker.decisionTicks.push(next.clock.tick);
-  }
-  if (
-    (previous.status === 'decision' || previous.status === 'event-result') &&
-    next.clock.tick !== previous.clock.tick
-  )
-    recordFailure(
-      tracker,
-      next,
-      'paused-time-advanced',
-      `${previous.status} at ${previous.clock.tick}`,
-    );
-}
-
-function checkInvariants(state: GameState, tracker: RunTracker, countRunningStep: boolean): void {
-  updateMinimums(state, tracker);
-  const fail = (code: string, detail: string): void => recordFailure(tracker, state, code, detail);
+function invariants(state: GameState, t: Tracker, running: boolean): void {
+  for (const id of RESOURCES)
+    if (finite(state.resources[id]))
+      t.minResources[id] = Math.min(t.minResources[id], state.resources[id]);
+  for (const id of SOURCES)
+    if (finite(state.island.sourceStates[id].available))
+      t.minSources[id] = Math.min(t.minSources[id], state.island.sourceStates[id].available);
 
   if (state.survivors.length !== state.config.survivorCount)
-    fail('survivor-count', `${state.survivors.length} !== ${state.config.survivorCount}`);
+    fail(t, state, 'survivor-count', `${state.survivors.length} !== ${state.config.survivorCount}`);
   const survivorIds = state.survivors.map((survivor) => survivor.id);
   if (new Set(survivorIds).size !== survivorIds.length)
-    fail('survivor-ids', 'survivor IDs are not unique');
+    fail(t, state, 'survivor-ids', 'survivor IDs are not unique');
   if (
-    survivorIds.length !== tracker.expectedSurvivorIds.length ||
-    survivorIds.some((id, index) => id !== tracker.expectedSurvivorIds[index])
+    survivorIds.length !== t.expectedSurvivorIds.length ||
+    survivorIds.some((id, index) => id !== t.expectedSurvivorIds[index])
   )
-    fail('survivor-ids', `expected stable IDs ${tracker.expectedSurvivorIds.join(',')}`);
+    fail(t, state, 'survivor-ids', `expected stable IDs ${t.expectedSurvivorIds.join(',')}`);
 
   if (!Number.isInteger(state.clock.tick) || state.clock.tick < 0)
-    fail('clock', `invalid tick ${state.clock.tick}`);
+    fail(t, state, 'clock', `invalid tick ${state.clock.tick}`);
   if (!Number.isInteger(state.clock.day) || state.clock.day < 1)
-    fail('clock', `invalid day ${state.clock.day}`);
+    fail(t, state, 'clock', `invalid day ${state.clock.day}`);
   const expectedDay = Math.min(
     Math.floor(state.clock.tick / state.config.ticksPerDay) + 1,
     Math.ceil(state.config.rescueTick / state.config.ticksPerDay),
   );
-  if (state.clock.day !== expectedDay) fail('clock', `day ${state.clock.day} !== ${expectedDay}`);
+  if (state.clock.day !== expectedDay)
+    fail(t, state, 'clock', `day ${state.clock.day} !== ${expectedDay}`);
   if (state.clock.tick > state.config.rescueTick)
-    fail('clock', `tick ${state.clock.tick} exceeds rescue ${state.config.rescueTick}`);
-  const maxDecisionGapTicks =
+    fail(t, state, 'clock', `tick ${state.clock.tick} exceeds rescue ${state.config.rescueTick}`);
+  const maximumGap =
     state.config.mode === 'production'
       ? TUNING.productionEventDeadlineDays * state.config.ticksPerDay
       : null;
   if (!finite(state.metrics.maxDecisionGapTicks) || state.metrics.maxDecisionGapTicks < 0)
-    fail('decision-gap', `invalid max gap ${state.metrics.maxDecisionGapTicks}`);
-  else if (maxDecisionGapTicks !== null && state.metrics.maxDecisionGapTicks > maxDecisionGapTicks)
+    fail(t, state, 'decision-gap', `invalid max gap ${state.metrics.maxDecisionGapTicks}`);
+  else if (maximumGap !== null && state.metrics.maxDecisionGapTicks > maximumGap)
     fail(
+      t,
+      state,
       'decision-gap',
-      `${state.metrics.maxDecisionGapTicks} > production limit ${maxDecisionGapTicks}`,
+      `${state.metrics.maxDecisionGapTicks} > production limit ${maximumGap}`,
     );
 
-  for (const id of RESOURCE_IDS) {
+  for (const id of RESOURCES) {
     const value = state.resources[id];
     if (!finite(value) || value < 0 || value > TUNING.resourceCaps[id])
-      fail('resource-bounds', `${id}=${value}`);
+      fail(t, state, 'resource-bounds', `${id}=${value}`);
   }
-  for (const id of SOURCE_IDS) {
+  for (const id of SOURCES) {
     const source = state.island.sourceStates[id];
     if (
       source.id !== id ||
@@ -381,7 +294,12 @@ function checkInvariants(state: GameState, tracker: RunTracker, countRunningStep
       source.capacity > TUNING.sourceCaps[id] ||
       source.available > source.capacity
     )
-      fail('source-bounds', `${id} available=${source.available} capacity=${source.capacity}`);
+      fail(
+        t,
+        state,
+        'source-bounds',
+        `${id} available=${source.available} capacity=${source.capacity}`,
+      );
   }
   if (
     !finite(state.shelter.condition) ||
@@ -389,18 +307,23 @@ function checkInvariants(state: GameState, tracker: RunTracker, countRunningStep
     state.shelter.condition < 0 ||
     state.shelter.condition > state.shelter.maximumCondition
   )
-    fail('shelter-bounds', `${state.shelter.condition}/${state.shelter.maximumCondition}`);
+    fail(
+      t,
+      state,
+      'shelter-bounds',
+      `${state.shelter.condition}/${state.shelter.maximumCondition}`,
+    );
 
   const activeTaskIds = new Set<string>();
   const reservationById = new Map(
     state.reservations.map((reservation) => [reservation.id, reservation]),
   );
   if (reservationById.size !== state.reservations.length)
-    fail('reservation-ids', 'reservation IDs are not unique');
+    fail(t, state, 'reservation-ids', 'reservation IDs are not unique');
   const reservationTaskIds = new Set<string>();
   for (const reservation of state.reservations) {
     if (reservationTaskIds.has(reservation.taskId))
-      fail('reservation-tasks', `duplicate task ${reservation.taskId}`);
+      fail(t, state, 'reservation-tasks', `duplicate task ${reservation.taskId}`);
     reservationTaskIds.add(reservation.taskId);
     const survivor = state.survivors.find((entry) => entry.id === reservation.survivorId);
     const task = survivor?.activeTask;
@@ -411,31 +334,37 @@ function checkInvariants(state: GameState, tracker: RunTracker, countRunningStep
       task.id !== reservation.taskId ||
       task.reservationId !== reservation.id
     )
-      fail('reservation-link', `${reservation.id} does not match its active task`);
-    if (!SOURCE_IDS.includes(reservation.sourceId))
-      fail('reservation-source', `${reservation.id} source`);
+      fail(t, state, 'reservation-link', `${reservation.id} does not match its active task`);
+    if (!SOURCES.includes(reservation.sourceId))
+      fail(t, state, 'reservation-source', `${reservation.id} source`);
     if (!finite(reservation.expectedYield) || reservation.expectedYield < 0)
-      fail('reservation-yield', `${reservation.id} yield=${reservation.expectedYield}`);
+      fail(t, state, 'reservation-yield', `${reservation.id} yield=${reservation.expectedYield}`);
     if (reservation.kind === 'materials') {
       if (!finite(reservation.reservedAmount ?? NaN) || (reservation.reservedAmount ?? 0) <= 0)
-        fail('material-reservation', `${reservation.id} amount=${reservation.reservedAmount}`);
+        fail(
+          t,
+          state,
+          'material-reservation',
+          `${reservation.id} amount=${reservation.reservedAmount}`,
+        );
       if (reservation.resourceId !== 'materials' || reservation.expectedYield !== 0)
-        fail('material-reservation', `${reservation.id} has invalid material fields`);
-    } else if (reservation.expectedYield <= 0) {
-      fail('reservation-yield', `${reservation.id} source yield must be positive`);
-    }
+        fail(t, state, 'material-reservation', `${reservation.id} has invalid material fields`);
+    } else if (reservation.expectedYield <= 0)
+      fail(t, state, 'reservation-yield', `${reservation.id} source yield must be positive`);
   }
-  const claimedBySource = emptySourceValues();
+  const claimedBySource = sourceValues();
   let claimedMaterials = 0;
   for (const reservation of state.reservations) {
     if (reservation.kind === 'materials') claimedMaterials += reservation.reservedAmount ?? 0;
     else claimedBySource[reservation.sourceId] += reservation.expectedYield;
   }
-  for (const sourceId of SOURCE_IDS)
+  for (const sourceId of SOURCES)
     if (claimedBySource[sourceId] > state.island.sourceStates[sourceId].available)
-      fail('source-overclaim', `${sourceId} claimed=${claimedBySource[sourceId]}`);
+      fail(t, state, 'source-overclaim', `${sourceId} claimed=${claimedBySource[sourceId]}`);
   if (claimedMaterials > state.resources.materials)
     fail(
+      t,
+      state,
       'material-overreservation',
       `claimed=${claimedMaterials} available=${state.resources.materials}`,
     );
@@ -449,13 +378,13 @@ function checkInvariants(state: GameState, tracker: RunTracker, countRunningStep
       !Number.isInteger(survivor.progressTicks) ||
       survivor.progressTicks > state.config.movementTicks
     )
-      fail('survivor-bounds', `${survivor.id} morale/progress`);
+      fail(t, state, 'survivor-bounds', `${survivor.id} morale/progress`);
     for (const [need, value] of Object.entries(survivor.needs))
       if (!finite(value) || value < 0 || value > 100)
-        fail('need-bounds', `${survivor.id}.${need}=${value}`);
+        fail(t, state, 'need-bounds', `${survivor.id}.${need}=${value}`);
     if (
-      !WAYPOINT_IDS.includes(survivor.currentWaypoint) ||
-      !WAYPOINT_IDS.includes(survivor.targetWaypoint) ||
+      !WAYPOINTS.includes(survivor.currentWaypoint) ||
+      !WAYPOINTS.includes(survivor.targetWaypoint) ||
       !finite(survivor.position.x) ||
       !finite(survivor.position.y) ||
       !finite(survivor.previousPosition.x) ||
@@ -469,36 +398,38 @@ function checkInvariants(state: GameState, tracker: RunTracker, countRunningStep
       survivor.previousPosition.y < 0 ||
       survivor.previousPosition.y > 1
     )
-      fail('position-bounds', `${survivor.id} position`);
+      fail(t, state, 'position-bounds', `${survivor.id} position`);
     if (!survivor.alive && survivor.activeTask)
-      fail('dead-task', `${survivor.id} retains ${survivor.activeTask.id}`);
+      fail(t, state, 'dead-task', `${survivor.id} retains ${survivor.activeTask.id}`);
     const task = survivor.activeTask;
     if (!task) continue;
-    if (activeTaskIds.has(task.id)) fail('task-ids', `duplicate task ${task.id}`);
+    if (activeTaskIds.has(task.id)) fail(t, state, 'task-ids', `duplicate task ${task.id}`);
     activeTaskIds.add(task.id);
     if (
       !TASK_KINDS.includes(task.kind) ||
-      !WAYPOINT_IDS.includes(task.destination) ||
+      !WAYPOINTS.includes(task.destination) ||
       (task.phase !== 'travel' && task.phase !== 'work') ||
       !Number.isInteger(task.remainingTicks) ||
       task.remainingTicks <= 0 ||
       !Number.isInteger(task.workTicks) ||
       task.workTicks <= 0 ||
       task.remainingTicks > task.workTicks ||
-      !TASK_REASON_CODES.includes(task.reason.code)
+      !TASK_REASONS.includes(task.reason.code)
     )
-      fail('task-invalid', `${survivor.id} task ${task.id}`);
+      fail(t, state, 'task-invalid', `${survivor.id} task ${task.id}`);
     if (task.phase === 'work' && survivor.progressTicks !== 0)
-      fail('task-progress', `${task.id} work progress=${survivor.progressTicks}`);
+      fail(t, state, 'task-progress', `${task.id} work progress=${survivor.progressTicks}`);
     if (task.phase === 'travel' && task.destination === survivor.currentWaypoint)
-      fail('task-travel', `${task.id} travels to current waypoint`);
+      fail(t, state, 'task-travel', `${task.id} travels to current waypoint`);
     if (task.phase === 'work' && task.destination !== survivor.currentWaypoint)
       fail(
+        t,
+        state,
         'task-work',
         `${task.id} work at ${survivor.currentWaypoint}, target ${task.destination}`,
       );
     if (task.reservationId !== null && !reservationById.has(task.reservationId))
-      fail('reservation-link', `${task.id} points to missing ${task.reservationId}`);
+      fail(t, state, 'reservation-link', `${task.id} points to missing ${task.reservationId}`);
     const taskReservation = task.reservationId
       ? reservationById.get(task.reservationId)
       : undefined;
@@ -514,321 +445,538 @@ function checkInvariants(state: GameState, tracker: RunTracker, countRunningStep
         (task.kind === 'repair-shelter' && taskReservation.kind !== 'materials') ||
         !['gather-water', 'gather-food', 'gather-materials', 'repair-shelter'].includes(task.kind))
     )
-      fail('reservation-link', `${task.id} has a reservation for the wrong task kind`);
+      fail(t, state, 'reservation-link', `${task.id} has a reservation for the wrong task kind`);
     if (
       ['gather-water', 'gather-food', 'gather-materials', 'repair-shelter'].includes(task.kind) &&
       task.reservationId === null
     )
-      fail('task-reservation', `${task.id} ${task.kind} has no reservation`);
+      fail(t, state, 'task-reservation', `${task.id} ${task.kind} has no reservation`);
   }
 
   if (state.activeEvent !== null) {
     const event = EVENT_BY_ID[state.activeEvent.id];
-    if (!event) fail('event-invalid', `unknown event ${state.activeEvent.id}`);
+    if (!event) fail(t, state, 'event-invalid', `unknown event ${state.activeEvent.id}`);
     if (
       !Number.isInteger(state.activeEvent.activatedTick) ||
       state.activeEvent.activatedTick < 0 ||
       state.activeEvent.activatedTick > state.clock.tick
     )
-      fail('event-timing', `${state.activeEvent.id} activated=${state.activeEvent.activatedTick}`);
+      fail(
+        t,
+        state,
+        'event-timing',
+        `${state.activeEvent.id} activated=${state.activeEvent.activatedTick}`,
+      );
     const participantIds = state.activeEvent.participantIds ?? [];
     const expectedParticipants = event?.participantRule === 'pair' ? 2 : 1;
     if (participantIds.length !== expectedParticipants)
       fail(
+        t,
+        state,
         'event-participants',
         `${state.activeEvent.id} has ${participantIds.length} participants`,
       );
     if (new Set(participantIds).size !== participantIds.length)
-      fail('event-participants', 'duplicate participants');
+      fail(t, state, 'event-participants', 'duplicate participants');
     if (
       participantIds.some(
         (id) => !state.survivors.some((survivor) => survivor.id === id && survivor.alive),
       )
     )
-      fail('event-participants', 'event references a non-living survivor');
+      fail(t, state, 'event-participants', 'event references a non-living survivor');
     if (
       event?.participantRule === 'forager' &&
       participantIds.some(
         (id) => !state.survivors.find((survivor) => survivor.id === id)?.traits.includes('forager'),
       )
     )
-      fail('event-participants', `${state.activeEvent.id} participant is not a forager`);
+      fail(t, state, 'event-participants', `${state.activeEvent.id} participant is not a forager`);
     if (
       state.activeEvent.chosenChoiceId !== null &&
       !event?.choices.some((choice) => choice.id === state.activeEvent!.chosenChoiceId)
     )
-      fail('event-choice', `${state.activeEvent.id} has unknown choice`);
+      fail(t, state, 'event-choice', `${state.activeEvent.id} has unknown choice`);
     if (state.status !== 'decision' && state.status !== 'event-result')
-      fail('event-status', `active event while ${state.status}`);
+      fail(t, state, 'event-status', `active event while ${state.status}`);
     if (
       state.status === 'decision' &&
       (state.activeEvent.chosenChoiceId !== null || state.activeEvent.result !== null)
     )
-      fail('event-status', 'decision must have no selected choice/result');
+      fail(t, state, 'event-status', 'decision must have no selected choice/result');
     if (
       state.status === 'event-result' &&
       (state.activeEvent.chosenChoiceId === null || state.activeEvent.result === null)
     )
-      fail('event-status', 'event-result must have choice/result');
-  } else if (state.status === 'decision' || state.status === 'event-result') {
-    fail('event-status', `${state.status} without active event`);
-  }
+      fail(t, state, 'event-status', 'event-result must have choice/result');
+  } else if (state.status === 'decision' || state.status === 'event-result')
+    fail(t, state, 'event-status', `${state.status} without active event`);
 
   const scheduledIds = new Set<string>();
   for (const effect of state.scheduledEffects) {
-    if (scheduledIds.has(effect.id)) fail('effect-ids', `duplicate effect ${effect.id}`);
+    if (scheduledIds.has(effect.id)) fail(t, state, 'effect-ids', `duplicate effect ${effect.id}`);
     scheduledIds.add(effect.id);
     if (
       !Number.isInteger(effect.dueTick) ||
       effect.dueTick <= state.clock.tick ||
       effect.dueTick > state.config.rescueTick
     )
-      fail('effect-timing', `${effect.id} due=${effect.dueTick}`);
-    if (!effect.sourceChoiceId) fail('effect-provenance', `${effect.id} has no source choice`);
+      fail(t, state, 'effect-timing', `${effect.id} due=${effect.dueTick}`);
+    if (!effect.sourceChoiceId)
+      fail(t, state, 'effect-provenance', `${effect.id} has no source choice`);
   }
 
-  if (countRunningStep && state.status === 'running') {
+  if (running && state.status === 'running')
     for (const survivor of state.survivors) {
       if (!survivor.alive) {
-        tracker.tasklessSteps.set(survivor.id, 0);
+        t.taskless.set(survivor.id, 0);
         continue;
       }
-      const count = survivor.activeTask ? 0 : (tracker.tasklessSteps.get(survivor.id) ?? 0) + 1;
-      tracker.tasklessSteps.set(survivor.id, count);
-      tracker.maxTasklessSteps = Math.max(tracker.maxTasklessSteps, count);
+      const count = survivor.activeTask ? 0 : (t.taskless.get(survivor.id) ?? 0) + 1;
+      t.taskless.set(survivor.id, count);
+      t.maxTaskless = Math.max(t.maxTaskless, count);
       if (count === MAX_TASKLESS_RUNNING_STEPS + 1)
         fail(
+          t,
+          state,
           'taskless-loop',
           `${survivor.id} exceeded ${MAX_TASKLESS_RUNNING_STEPS} taskless running steps`,
         );
     }
-  } else if (state.status !== 'running') {
-    for (const survivor of state.survivors) tracker.tasklessSteps.set(survivor.id, 0);
-  }
+  else if (state.status !== 'running')
+    for (const survivor of state.survivors) t.taskless.set(survivor.id, 0);
 }
-
-function createTracker(state: GameState): RunTracker {
-  const minResources = emptyResourceValues();
-  const minSources = emptySourceValues();
-  const tracker: RunTracker = {
-    expectedSurvivorIds: state.survivors.map((survivor) => survivor.id),
-    tasklessSteps: new Map(state.survivors.map((survivor) => [survivor.id, 0])),
-    maxTasklessSteps: 0,
-    minResources,
-    minSources,
-    priorityUsage: emptyPriorityUsage(),
-    failures: [],
-    failureKeys: new Set(),
-    commandTrace: [],
-    decisionTicks: [],
+function commandTrace(
+  state: GameState,
+  command: GameCommand,
+  accepted: boolean,
+  reason?: string,
+): Trace {
+  const entry: Trace = {
+    tick: state.clock.tick,
+    day: state.clock.day,
+    type: command.type,
+    accepted,
   };
-  for (const id of RESOURCE_IDS) minResources[id] = state.resources[id];
-  for (const id of SOURCE_IDS) minSources[id] = state.island.sourceStates[id].available;
-  return tracker;
+  if (command.type === 'set-camp-priority') entry.priority = command.priority;
+  if (command.type === 'select-event-choice') {
+    entry.eventId = command.eventId;
+    entry.choiceId = command.choiceId;
+  }
+  if (command.type === 'acknowledge-event-result') entry.eventId = command.eventId;
+  if (reason) entry.reason = reason;
+  return entry;
 }
-
-function runCommand(state: GameState, command: GameCommand, tracker: RunTracker): GameState {
+function loss(effect: EffectData): { damage: number; resources: number } {
+  return {
+    damage: effect.kind === 'health' && effect.amount < 0 ? -effect.amount : 0,
+    resources: effect.kind === 'resource' && effect.amount < 0 ? -effect.amount : 0,
+  };
+}
+function transition(
+  previous: GameState,
+  next: GameState,
+  t: Tracker,
+  kind: 'advance' | 'command',
+): void {
+  if (next.clock.tick < previous.clock.tick)
+    fail(t, next, 'tick-regression', `tick moved ${previous.clock.tick} -> ${next.clock.tick}`);
+  if (kind === 'command' && next.clock.tick !== previous.clock.tick)
+    fail(t, next, 'command-advanced-time', `${previous.clock.tick} -> ${next.clock.tick}`);
+  if (kind === 'advance' && next.clock.tick !== previous.clock.tick + 1)
+    fail(t, next, 'advance-step-size', `${previous.clock.tick} -> ${next.clock.tick}`);
+  if (previous.status === 'running' && next.status === 'decision' && next.activeEvent) {
+    const previousDecisionTick = t.decisionTicks.at(-1);
+    if (previousDecisionTick !== undefined) {
+      const spacing = next.clock.tick - previousDecisionTick;
+      const minimumSpacing = Math.ceil(next.config.ticksPerDay * 0.75);
+      if (next.config.mode === 'production' && spacing < minimumSpacing)
+        fail(
+          t,
+          next,
+          'decision-spacing',
+          `${spacing} < production minimum ${minimumSpacing} ticks`,
+        );
+    }
+    t.decisionTicks.push(next.clock.tick);
+  }
+  if (
+    (previous.status === 'decision' || previous.status === 'event-result') &&
+    next.clock.tick !== previous.clock.tick
+  )
+    fail(t, next, 'paused-time-advanced', `${previous.status} at ${previous.clock.tick}`);
+}
+function trackedCommand(state: GameState, command: GameCommand, t: Tracker): GameState {
   const result = applyCommand(state, command);
-  appendCommandTrace(tracker, state, command, result.accepted, result.reason);
-  checkTransition(state, result.state, tracker, 'command');
-  checkInvariants(result.state, tracker, false);
+  t.trace.push(commandTrace(state, command, result.accepted, result.reason));
+  transition(state, result.state, t, 'command');
+  if (!result.accepted) return result.state;
+  if (command.type === 'set-camp-priority') {
+    t.priorityUsage[command.priority] += 1;
+    inc(t.frequencies.priorities, command.priority);
+  }
+  if (command.type === 'select-event-choice') {
+    const event = EVENT_BY_ID[command.eventId];
+    const choice = event.choices.find((c) => c.id === command.choiceId)!;
+    inc(t.frequencies.choices, `${command.eventId}/${command.choiceId}`);
+    inc(
+      event.category === 'follow-up' ? t.frequencies.followUps : t.frequencies.rootEvents,
+      command.eventId,
+    );
+    for (const effect of choice.immediateEffects) {
+      const value = loss(effect);
+      if (value.damage) inc(t.frequencies.damageByEvent, command.eventId, value.damage);
+      if (value.resources) inc(t.frequencies.resourceLossByEvent, command.eventId, value.resources);
+    }
+  }
+  invariants(result.state, t, false);
   return result.state;
 }
-
-function maybeApplyPolicy(state: GameState, tracker: RunTracker, mode: GameMode): GameState {
-  if (mode === 'slice' || state.status !== 'running') return state;
-  if (state.campPolicy.lastChangedDay === state.clock.day) return state;
-  const priority = projectedPriority(state);
-  if (priority === state.campPolicy.priority) return state;
-  const next = runCommand(state, { type: 'set-camp-priority', priority }, tracker);
-  const lastTrace = tracker.commandTrace.at(-1)!;
-  if (!lastTrace.accepted) {
-    recordFailure(
-      tracker,
-      next,
-      'policy-command',
-      `priority ${priority} rejected: ${lastTrace.reason ?? 'unknown'}`,
-    );
-  } else tracker.priorityUsage[priority] += 1;
+function deathCauses(state: GameState, id: string): string[] {
+  const s = state.survivors.find((item) => item.id === id)!;
+  const causes: string[] = [];
+  if (s.needs.thirst >= TUNING.critical.thirst) causes.push('thirst');
+  if (s.needs.hunger >= TUNING.critical.hunger) causes.push('hunger');
+  if (s.needs.energy <= TUNING.critical.energy) causes.push('exhaustion');
+  return causes.length ? causes : ['health-loss'];
+}
+function trackedAdvance(state: GameState, t: Tracker): GameState {
+  const due = state.scheduledEffects.filter((effect) => effect.dueTick === state.clock.tick + 1);
+  const next = advanceStep(state);
+  transition(state, next, t, 'advance');
+  for (const effect of due) {
+    inc(t.frequencies.automaticEffects, `${effect.sourceEventId}/${effect.sourceChoiceId}`);
+    const value = loss(effect.effect);
+    if (value.damage) inc(t.frequencies.damageByEvent, effect.sourceEventId, value.damage);
+    if (value.resources)
+      inc(t.frequencies.resourceLossByEvent, effect.sourceEventId, value.resources);
+  }
+  for (const before of state.survivors) {
+    const after = next.survivors.find((s) => s.id === before.id)!;
+    if (before.alive && !after.alive)
+      t.deaths.push({
+        survivorId: before.id,
+        day: next.clock.day,
+        tick: next.clock.tick,
+        causes: deathCauses(state, before.id),
+      });
+  }
+  invariants(next, t, true);
   return next;
 }
-
-function runOnce(seed: string, mode: GameMode): SimulationResult {
-  let state = mode === 'slice' ? createGame({ ...SLICE_GAME_CONFIG, seed }) : createGame({ seed });
-  const tracker = createTracker(state);
-  checkInvariants(state, tracker, false);
-  const maximumActions = state.config.rescueTick + 4 * (mode === 'slice' ? 3 : 8) + 2 * 15 + 20;
-  let advances = 0;
-  let commands = 0;
-  let actions = 0;
-
-  while (state.status !== 'victory' && state.status !== 'defeat' && actions < maximumActions) {
-    if (state.status === 'running') {
-      const traceCountBeforePolicy = tracker.commandTrace.length;
-      state = maybeApplyPolicy(state, tracker, mode);
-      if (tracker.commandTrace.length > traceCountBeforePolicy) {
-        commands += 1;
-        actions += 1;
-      }
-      if (state.status !== 'running') continue;
-      const next = advanceStep(state);
-      checkTransition(state, next, tracker, 'advance');
-      state = next;
-      advances += 1;
-      actions += 1;
-      checkInvariants(state, tracker, true);
-      continue;
-    }
-    if (state.status === 'decision' && state.activeEvent) {
-      const eventId = state.activeEvent.id;
-      const choiceId = choiceForEvent(state, mode);
-      state = runCommand(state, { type: 'select-event-choice', eventId, choiceId }, tracker);
-      commands += 1;
-      actions += 1;
-      if (state.status !== 'event-result') {
-        recordFailure(
-          tracker,
-          state,
-          'event-command',
-          `choice ${eventId}/${choiceId} was not accepted`,
-        );
+function withoutEvent<T>(excluded: ProductionEventId | null, callback: () => T): T {
+  if (!excluded) return callback();
+  const registry = PRODUCTION_EVENT_DEFINITIONS as unknown as Array<
+    (typeof PRODUCTION_EVENT_DEFINITIONS)[number]
+  >;
+  const index = registry.findIndex((event) => event.id === excluded);
+  if (index < 0) throw new Error(`unknown excluded event ID: ${excluded}`);
+  const [removed] = registry.splice(index, 1);
+  try {
+    return callback();
+  } finally {
+    registry.splice(index, 0, removed!);
+  }
+}
+function removeFollowUp(state: GameState, excluded: ProductionEventId | null): void {
+  if (excluded && state.eventSchedule.pendingFollowUps)
+    state.eventSchedule.pendingFollowUps = state.eventSchedule.pendingFollowUps.filter(
+      (follow) => follow.eventId !== excluded,
+    );
+}
+function runOnce(
+  seed: string,
+  gameMode: GameMode,
+  policyId: PolicyId,
+  excluded: ProductionEventId | null,
+): Result {
+  return withoutEvent(excluded, () => {
+    let state =
+      gameMode === 'slice' ? createGame({ ...SLICE_GAME_CONFIG, seed }) : createGame({ seed });
+    const p = createPolicy(policyId, seed);
+    const t = tracker(state);
+    invariants(state, t, false);
+    t.initialFailures = [...t.failures];
+    let actions = 0;
+    const maximum = state.config.rescueTick + 100;
+    while (!['victory', 'defeat'].includes(state.status) && actions < maximum) {
+      removeFollowUp(state, excluded);
+      if (state.status === 'running') {
+        if (gameMode === 'production' && state.campPolicy.lastChangedDay !== state.clock.day) {
+          const priority = p.chooseCampPriority(state);
+          if (priority && priority !== state.campPolicy.priority) {
+            state = trackedCommand(state, { type: 'set-camp-priority', priority }, t);
+            actions += 1;
+          }
+        }
+        if (state.status === 'running') {
+          state = trackedAdvance(state, t);
+          actions += 1;
+        }
         continue;
       }
-      const acknowledged = runCommand(
-        state,
-        { type: 'acknowledge-event-result', eventId },
-        tracker,
-      );
-      commands += 1;
-      actions += 1;
-      state = acknowledged;
-      continue;
+      if (state.status === 'decision' && state.activeEvent) {
+        const eventId = state.activeEvent.id;
+        const choiceId =
+          gameMode === 'slice' ? EVENT_BY_ID[eventId].choices[0]!.id : p.chooseEventChoice(state);
+        state = trackedCommand(state, { type: 'select-event-choice', eventId, choiceId }, t);
+        actions += 1;
+        if (state.status === 'event-result') {
+          state = trackedCommand(state, { type: 'acknowledge-event-result', eventId }, t);
+          actions += 1;
+        }
+        continue;
+      }
+      if (state.status === 'event-result' && state.activeEvent) {
+        state = trackedCommand(
+          state,
+          { type: 'acknowledge-event-result', eventId: state.activeEvent.id },
+          t,
+        );
+        actions += 1;
+        continue;
+      }
+      fail(t, state, 'simulation-stuck', state.status);
+      break;
     }
-    if (state.status === 'event-result' && state.activeEvent) {
-      const eventId = state.activeEvent.id;
-      state = runCommand(state, { type: 'acknowledge-event-result', eventId }, tracker);
-      commands += 1;
-      actions += 1;
-      continue;
-    }
-    recordFailure(tracker, state, 'simulation-stuck', `unhandled state ${state.status}`);
-    break;
-  }
-
-  if (state.status !== 'victory' && state.status !== 'defeat')
-    recordFailure(
-      tracker,
-      state,
-      'guard-exceeded',
-      `${actions} actions (${advances} advances, ${commands} commands)`,
-    );
-  if (state.clock.tick > state.config.rescueTick)
-    recordFailure(
-      tracker,
-      state,
-      'terminal-after-rescue',
-      `${state.clock.tick} > ${state.config.rescueTick}`,
-    );
-  checkInvariants(state, tracker, false);
-  if (
-    mode === 'production' &&
-    (state.metrics.interactiveEventCount < 8 || state.metrics.interactiveEventCount > 10)
-  )
-    recordFailure(
-      tracker,
-      state,
-      'decision-count',
-      `${state.metrics.interactiveEventCount} decisions outside production target 8-10`,
-    );
-
-  const decisionSpacings = tracker.decisionTicks
-    .slice(1)
-    .map((tick, index) => tick - tracker.decisionTicks[index]!);
-
-  const snapshot = createSnapshot(state);
-  const serialized = JSON.stringify(snapshot);
-  const endingQuality =
-    state.status === 'victory' || state.status === 'defeat'
-      ? deriveEndingSummary(state).quality
-      : null;
+    if (!['victory', 'defeat'].includes(state.status))
+      fail(t, state, 'guard-exceeded', `${actions}`);
+    if (state.clock.tick > state.config.rescueTick)
+      fail(t, state, 'terminal-after-rescue', `${state.clock.tick} > ${state.config.rescueTick}`);
+    invariants(state, t, false);
+    for (const [reason, count] of Object.entries(state.metrics.taskReasonCounts))
+      inc(t.frequencies.taskReasons, reason, count ?? 0);
+    const gaps = t.decisionTicks.slice(1).map((tick, index) => tick - t.decisionTicks[index]!);
+    const snapshot = createSnapshot(state);
+    const ending =
+      state.status === 'victory' || state.status === 'defeat'
+        ? deriveEndingSummary(state).quality
+        : null;
+    return {
+      seed,
+      gameSeed: seed,
+      policy:
+        gameMode === 'slice'
+          ? 'm1-slice-first-choice'
+          : p.id === 'conservative'
+            ? 'm3-conservative'
+            : p.id,
+      policyId: gameMode === 'slice' ? 'slice-first-choice' : p.id,
+      version: gameMode === 'slice' ? 'm1' : p.id === 'conservative' ? 'm3' : p.version,
+      policyVersion: gameMode === 'slice' ? 'm1' : p.version,
+      policySeed: p.policySeed,
+      excludedEventId: excluded,
+      mode: gameMode,
+      status: snapshot.status,
+      tick: snapshot.clock.tick,
+      day: snapshot.clock.day,
+      survivorCount: snapshot.survivors.length,
+      aliveCount: snapshot.survivors.filter((s) => s.alive).length,
+      eventCount: snapshot.metrics.interactiveEventCount,
+      minDecisionSpacingTicks: gaps.length ? Math.min(...gaps) : null,
+      maxDecisionGapTicks: snapshot.metrics.maxDecisionGapTicks,
+      decisionCompliance:
+        gameMode === 'slice' ||
+        (snapshot.metrics.interactiveEventCount >= 8 &&
+          snapshot.metrics.interactiveEventCount <= 10),
+      gapCompliance:
+        gameMode === 'slice' ||
+        snapshot.metrics.maxDecisionGapTicks <=
+          TUNING.productionEventDeadlineDays * state.config.ticksPerDay,
+      taskReasonCounts: { ...snapshot.metrics.taskReasonCounts },
+      priorityUsage: { ...t.priorityUsage },
+      frequencies: t.frequencies,
+      deaths: t.deaths,
+      maxTasklessRunningSteps: t.maxTaskless,
+      endingQuality: ending,
+      minResources: { ...t.minResources },
+      minSources: { ...t.minSources },
+      initialInvariantFailures: t.initialFailures,
+      invariantFailures: t.failures,
+      serializedStateBytes: Buffer.byteLength(JSON.stringify(snapshot)),
+      commandTrace: t.trace,
+    };
+  });
+}
+function merge(target: Record<string, number>, source: Record<string, number>): void {
+  for (const [key, value] of Object.entries(source)) inc(target, key, value);
+}
+function aggregate(results: readonly Result[]) {
+  const victories = results.filter((r) => r.status === 'victory');
+  const all = victories.filter((r) => r.aliveCount === r.survivorCount);
+  const frequencies = emptyFrequencies();
+  for (const result of results)
+    for (const key of Object.keys(frequencies) as (keyof Frequencies)[])
+      merge(frequencies[key], result.frequencies[key]);
   return {
-    seed,
-    policy: mode === 'slice' ? SLICE_POLICY_ID : POLICY_ID,
-    version: mode === 'slice' ? SLICE_POLICY_VERSION : POLICY_VERSION,
-    mode,
-    status: snapshot.status,
-    tick: snapshot.clock.tick,
-    day: snapshot.clock.day,
-    survivorCount: snapshot.survivors.length,
-    aliveCount: snapshot.survivors.filter((survivor) => survivor.alive).length,
-    eventCount: snapshot.metrics.interactiveEventCount,
-    minDecisionSpacingTicks: decisionSpacings.length ? Math.min(...decisionSpacings) : null,
-    maxDecisionGapTicks: snapshot.metrics.maxDecisionGapTicks,
-    taskReasonCounts: { ...snapshot.metrics.taskReasonCounts },
-    priorityUsage: { ...tracker.priorityUsage },
-    maxTasklessRunningSteps: tracker.maxTasklessSteps,
-    endingQuality,
-    minResources: { ...tracker.minResources },
-    minSources: { ...tracker.minSources },
-    invariantFailures: tracker.failures,
-    serializedStateBytes: new TextEncoder().encode(serialized).byteLength,
-    commandTrace: tracker.commandTrace,
+    runs: results.length,
+    victories: victories.length,
+    victoryRate: victories.length / results.length,
+    rescueRate: victories.length / results.length,
+    allSurvivorVictories: all.length,
+    allSurvivorRate: all.length / results.length,
+    defeats: results.filter((r) => r.status === 'defeat').length,
+    invariantFailures: results.filter((r) => r.invariantFailures.length).length,
+    invariantFailureCount: results.reduce((sum, r) => sum + r.invariantFailures.length, 0),
+    initialInvariantFailures: results.filter((r) => r.initialInvariantFailures.length).length,
+    decisionCompliantRuns: results.filter((r) => r.decisionCompliance).length,
+    gapCompliantRuns: results.filter((r) => r.gapCompliance).length,
+    endingDistribution: Object.fromEntries(
+      ['triumphant-rescue', 'costly-rescue', 'barely-alive', 'lost-expedition'].map((quality) => [
+        quality,
+        results.filter((r) => r.endingQuality === quality).length,
+      ]),
+    ),
+    deaths: results.flatMap((r) => r.deaths.map((death) => ({ gameSeed: r.gameSeed, ...death }))),
+    minima: {
+      resources: Object.fromEntries(
+        RESOURCES.map((id) => [id, Math.min(...results.map((r) => r.minResources[id]))]),
+      ),
+      sources: Object.fromEntries(
+        SOURCES.map((id) => [id, Math.min(...results.map((r) => r.minSources[id]))]),
+      ),
+    },
+    frequencies,
   };
 }
-
+function scenario(
+  seeds: readonly string[],
+  gameMode: GameMode,
+  policyId: PolicyId,
+  excludedEventId: ProductionEventId | null,
+) {
+  const results = seeds.map((seed) => runOnce(seed, gameMode, policyId, excludedEventId));
+  return {
+    policyId,
+    policyVersion: createPolicy(policyId, seeds[0] ?? 'probe').version,
+    excludedEventId,
+    summary: aggregate(results),
+    failureRuns: results.filter((r) => r.status === 'defeat' || r.invariantFailures.length),
+    results,
+  };
+}
 function main(): void {
   try {
-    const mode = parseMode();
-    const runs = parseRuns();
-    const seedPrefix = parseArgument('--seed') ?? DEFAULT_SEED;
-    if (seedPrefix.trim().length === 0) throw new Error('--seed must not be empty');
-
-    const results = Array.from({ length: runs }, (_, index) =>
-      runOnce(runs === 1 ? seedPrefix : `${seedPrefix}-${index + 1}`, mode),
+    validateArguments();
+    const gameMode = mode();
+    const batchMode = batch();
+    const runs = integer('--runs', DEFAULT_RUNS, 10_000);
+    const seedPrefix = arg('--seed') ?? DEFAULT_SEED;
+    if (!seedPrefix.trim()) throw new Error('--seed must not be empty');
+    if (batchMode === 'release' && arg('--seed') !== undefined)
+      throw new Error(
+        '--seed cannot be combined with --batch=release; the checked-in manifest is fixed',
+      );
+    if (batchMode === 'release' && arg('--runs') !== undefined && runs !== 10_000)
+      throw new Error('--batch=release always uses exactly 10000 manifest seeds');
+    if (batchMode === 'sensitivity' && arg('--seed') !== undefined)
+      throw new Error(
+        '--seed cannot be combined with --batch=sensitivity; sensitivity uses the retained manifest',
+      );
+    if (gameMode === 'slice' && batchMode !== 'single')
+      throw new Error('slice mode only supports --batch=single');
+    const rawExcluded = arg('--exclude-event');
+    if (rawExcluded && !EVENT_IDS.includes(rawExcluded as ProductionEventId))
+      throw new Error(`--exclude-event must be one of ${EVENT_IDS.join(', ')}`);
+    if (rawExcluded && batchMode === 'sensitivity')
+      throw new Error('--exclude-event cannot be combined with --batch=sensitivity');
+    const retainedManifest =
+      batchMode === 'release' || batchMode === 'sensitivity' ? loadReleaseManifest() : null;
+    const manifestBatch = retainedManifest
+      ? {
+          definition: retainedManifest.definition,
+          seeds:
+            batchMode === 'sensitivity' && arg('--runs') !== undefined
+              ? retainedManifest.seeds.slice(0, runs)
+              : retainedManifest.seeds,
+        }
+      : {
+          definition: null,
+          seeds: Array.from({ length: runs }, (_, i) =>
+            runs === 1 ? seedPrefix : `${seedPrefix}-${i + 1}`,
+          ),
+        };
+    const policies = batchMode === 'matrix' || batchMode === 'release' ? POLICY_IDS : [policy()];
+    const excludedIds: (ProductionEventId | null)[] =
+      batchMode === 'sensitivity'
+        ? [null, ...EVENT_IDS]
+        : [(rawExcluded as ProductionEventId | undefined) ?? null];
+    const scenarios = policies.flatMap((id) =>
+      excludedIds.map((excluded) => scenario(manifestBatch.seeds, gameMode, id, excluded)),
     );
-    const victories = results.filter((result) => result.status === 'victory');
-    const allSurvivorVictories = victories.filter(
-      (result) => result.aliveCount === result.survivorCount,
-    );
-    const invariantFailureRuns = results.filter((result) => result.invariantFailures.length > 0);
+    const restoredEventIds = PRODUCTION_EVENT_DEFINITIONS.map((event) => event.id);
+    if (
+      restoredEventIds.length !== EVENT_IDS.length ||
+      restoredEventIds.some((id, index) => id !== EVENT_IDS[index])
+    )
+      throw new Error('sensitivity registry restoration failed');
+    const aggregateOnly = batchMode !== 'single';
+    const baseline = scenarios.find((item) => item.excludedEventId === null);
     const report = {
-      policy: mode === 'slice' ? SLICE_POLICY_ID : POLICY_ID,
-      version: mode === 'slice' ? SLICE_POLICY_VERSION : POLICY_VERSION,
-      mode,
-      runs,
-      seedPrefix,
+      policy:
+        scenarios.length === 1
+          ? gameMode === 'slice'
+            ? 'm1-slice-first-choice'
+            : scenarios[0]!.policyId === 'conservative'
+              ? 'm3-conservative'
+              : scenarios[0]!.policyId
+          : 'multiple',
+      version:
+        scenarios.length === 1
+          ? gameMode === 'slice'
+            ? 'm1'
+            : scenarios[0]!.policyId === 'conservative'
+              ? 'm3'
+              : scenarios[0]!.policyVersion
+          : 'matrix-v1',
+      mode: gameMode,
+      batch: batchMode,
+      runs: manifestBatch.seeds.length,
+      seedPrefix: manifestBatch.definition?.prefix ?? seedPrefix,
+      manifest: manifestBatch.definition,
+      manifestSelection: manifestBatch.definition
+        ? {
+            selectedCount: manifestBatch.seeds.length,
+            firstSeed: manifestBatch.seeds[0],
+            lastSeed: manifestBatch.seeds.at(-1),
+          }
+        : null,
+      registryRestored: true,
+      excludedEventIds: excludedIds.filter((id): id is ProductionEventId => id !== null),
       invariantThresholds: {
         maxTasklessRunningSteps: MAX_TASKLESS_RUNNING_STEPS,
         maxDecisionGapTicks: TUNING.productionEventDeadlineDays * 600,
       },
-      summary: {
-        victories: victories.length,
-        victoryRate: victories.length / runs,
-        allSurvivorVictories: allSurvivorVictories.length,
-        allSurvivorRate: allSurvivorVictories.length / runs,
-        defeats: results.filter((result) => result.status === 'defeat').length,
-        invariantFailures: invariantFailureRuns.length,
-        invariantFailureCount: results.reduce(
-          (total, result) => total + result.invariantFailures.length,
-          0,
-        ),
-      },
-      results,
+      summary: scenarios.length === 1 ? scenarios[0]!.summary : undefined,
+      sensitivity:
+        batchMode === 'sensitivity'
+          ? scenarios
+              .filter((item) => item.excludedEventId)
+              .map((item) => ({
+                excludedEventId: item.excludedEventId,
+                rescueRate: item.summary.rescueRate,
+                rescueRateDelta: item.summary.rescueRate - baseline!.summary.rescueRate,
+              }))
+          : undefined,
+      scenarios: scenarios.map((item) => ({
+        policyId: item.policyId,
+        policyVersion: item.policyVersion,
+        excludedEventId: item.excludedEventId,
+        summary: item.summary,
+        failureRuns: item.failureRuns,
+        ...(aggregateOnly ? {} : { results: item.results }),
+      })),
+      results: scenarios.length === 1 && !aggregateOnly ? scenarios[0]!.results : undefined,
     };
     console.log(JSON.stringify(report, null, 2));
-    if (
-      results.some(
-        (result) =>
-          result.invariantFailures.length > 0 ||
-          (result.status !== 'victory' && result.status !== 'defeat') ||
-          result.survivorCount !== (mode === 'slice' ? 1 : 3),
-      )
-    )
-      process.exitCode = 1;
+    process.stderr.write(
+      `simulate: ${batchMode} ${manifestBatch.seeds.length} seed(s), ${scenarios.length} scenario(s), ` +
+        `${scenarios.reduce((total, item) => total + item.summary.defeats, 0)} defeat(s), ` +
+        `${scenarios.reduce((total, item) => total + item.summary.invariantFailures, 0)} invariant-failure run(s)\n`,
+    );
+    if (scenarios.some((item) => item.summary.invariantFailures > 0)) process.exitCode = 1;
   } catch (error) {
     console.log(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }));
     process.exitCode = 1;
   }
 }
-
 main();

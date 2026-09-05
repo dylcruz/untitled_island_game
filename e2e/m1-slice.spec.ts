@@ -20,7 +20,9 @@ test('pauses for decisions, shows results, and completes the shortened slice', a
   }
 
   await expect(page.getByRole('heading', { name: 'Rescue has arrived' })).toBeVisible();
-  await expect(page.getByTestId('time-status')).toContainText('step 360 of 360');
+  await expect(page.getByTestId('time-status')).toContainText('Day 3 · 6:00 AM');
+  await expect(page.getByTestId('time-status')).toContainText('0 minutes to rescue');
+  await expect(page.getByTestId('time-status')).not.toContainText(/\b(step|ticks?)\b/i);
   const ending = page.getByRole('dialog');
   const acknowledgement = page.getByTestId('acknowledge-ending');
   await expect(ending).toBeVisible();
