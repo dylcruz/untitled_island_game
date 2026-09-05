@@ -5,8 +5,11 @@ current implementation path. Milestones 0 and 1 are complete. Milestone 2's
 software implementation and automated verification are complete; its required
 five-person blind-playtest gate remains open. Milestone 3's verified software
 scope is complete; final content playtesting and release validation remain open.
-Milestone 4 is complete. Milestone 5 implementation is active on
-`feature/milestone-5-balance-release-candidate`.
+Milestone 4 is complete. Milestone 5's automated implementation and configured
+browser verification are complete on
+`feature/milestone-5-balance-release-candidate`; its human timing, physical
+device, cross-browser, performance, manual-play, and final playtest gates remain
+open.
 
 ## Current Baseline
 
@@ -280,6 +283,9 @@ milestone completes and tunes the final content pool.
   3.0-point worst exclusion delta, zero invariant failures, and full
   decision/gap compliance. Sensitivity artifact SHA-256:
   `d498a5e640d0074f382858418b6bb99d726eb6f8cb30c29d45dd5dd95479222b`.
+  Final configured Playwright verification passed 41 tests with one intentional
+  skip across Desktop Chrome and Pixel 7 projects; typecheck, lint, formatting,
+  100 unit tests, production build, and the CI simulation also passed.
 - [ ] Run the documented ten-run human timing sample and meet the 15–25 minute
   criteria.
 - [ ] Profile Canvas, React snapshot cadence, memory, and input responsiveness on
