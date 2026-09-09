@@ -1,3 +1,4 @@
+import { cloneOutcome, describeOutcome, describeResolvedEffect } from './outcomes';
 import { createIslandState, waypointPosition } from './island';
 import { EVENT_BY_ID, eventRegistryForMode, PRODUCTION_EVENT_DEFINITIONS } from './events';
 import { cloneRandomStreamStates, createRandomStreamStates, DeterministicRandom } from './random';
@@ -8,6 +9,7 @@ import type {
   CommandResult,
   DerivedTime,
   EffectData,
+  ResolvedEffect,
   EventDefinition,
   EventId,
   GameCommand,
@@ -91,6 +93,7 @@ function copyState(state: GameState): GameState {
     activeEvent: state.activeEvent
       ? {
           ...state.activeEvent,
+          outcome: state.activeEvent.outcome ? cloneOutcome(state.activeEvent.outcome) : undefined,
           participantIds: [...(state.activeEvent.participantIds ?? [])],
           referencedChoice: state.activeEvent.referencedChoice
             ? { ...state.activeEvent.referencedChoice }
@@ -109,6 +112,7 @@ function copyState(state: GameState): GameState {
     },
     choiceRecords: state.choiceRecords.map((value) => ({
       ...value,
+      outcome: value.outcome ? cloneOutcome(value.outcome) : undefined,
       participantIds: [...value.participantIds],
     })),
     turningPoints: state.turningPoints.map((value) => ({
@@ -654,7 +658,7 @@ function hasLivingOriginalParticipant(
   );
 }
 
-function applyEffect(
+function mutateEffect(
   state: GameState,
   effect: EffectData,
   participantIds: readonly string[] = [],
@@ -701,6 +705,69 @@ function applyEffect(
       );
     }
   }
+}
+
+/** Capture each effect separately so sequential caps and injury side effects remain exact. */
+function applyEffect(
+  state: GameState,
+  effect: EffectData,
+  participantIds: readonly string[] = [],
+): ResolvedEffect {
+  const resolved: ResolvedEffect = {
+    effect: { ...effect },
+    fired: true,
+    changes: [],
+    injuries: [],
+  };
+  const targets = targetsForEffect(state, effect, participantIds);
+  const before = targets.map((survivor) => ({
+    id: survivor.id,
+    needs: { ...survivor.needs },
+    morale: survivor.morale,
+    injury: survivor.injury ? { ...survivor.injury } : null,
+  }));
+  const resources = { ...state.resources };
+  const shelter = state.shelter.condition;
+  mutateEffect(state, effect, participantIds);
+  const change = (
+    kind: (typeof resolved.changes)[number]['kind'],
+    start: number,
+    end: number,
+    survivorId?: string,
+    target?: (typeof resolved.changes)[number]['target'],
+  ) => {
+    resolved.changes.push({
+      kind,
+      target,
+      survivorId,
+      before: start,
+      after: end,
+      delta: end - start,
+    });
+  };
+  if (effect.kind === 'resource') {
+    const target = effect.target as ResourceId;
+    change('resource', resources[target], state.resources[target], undefined, target);
+  } else if (effect.kind === 'shelter') change('shelter', shelter, state.shelter.condition);
+  else
+    for (const [index, survivor] of targets.entries()) {
+      const start = before[index]!;
+      if (effect.kind === 'health')
+        change('health', start.needs.health, survivor.needs.health, survivor.id);
+      if (effect.kind === 'need') {
+        const target = effect.target as keyof typeof survivor.needs;
+        change('need', start.needs[target], survivor.needs[target], survivor.id, target);
+      }
+      if (effect.kind === 'morale' || effect.kind === 'injury')
+        change('morale', start.morale, survivor.morale, survivor.id);
+      if (effect.kind === 'injury' && survivor.injury)
+        resolved.injuries.push({
+          survivorId: survivor.id,
+          before: start.injury,
+          after: { ...survivor.injury },
+        });
+    }
+  return resolved;
 }
 
 function participantsFor(state: GameState, event: EventDefinition): string[] | null {
@@ -1148,8 +1215,12 @@ export function advanceStep(state: GameState): GameState {
       );
       continue;
     }
-    applyEffect(next, effect.effect, participantIds);
-    addHistory(next, 'effect', effect.description);
+    const resolved = applyEffect(next, effect.effect, participantIds);
+    addHistory(
+      next,
+      'effect',
+      `Delayed consequence ${effect.sourceEventId}/${effect.sourceChoiceId}: ${describeResolvedEffect(resolved, next.survivors)}`,
+    );
   }
   for (const survivor of next.survivors) {
     if (!survivor.alive) continue;
@@ -1202,14 +1273,18 @@ function selectEventChoice(state: GameState, eventId: EventId, choiceId: string)
     return { state, accepted: false, reason: 'insufficient-resources' };
   const next = copyState(state);
   const participantIds = next.activeEvent?.participantIds ?? [];
+  const outcome = { effects: [] as ResolvedEffect[] };
   for (const effect of choice.immediateEffects) {
     if (effect.probability !== undefined) {
       const random = new DeterministicRandom(next.rngStates.eventOutcome);
       const succeeds = random.next() < effect.probability;
       next.rngStates.eventOutcome = random.exportState();
-      if (!succeeds) continue;
+      if (!succeeds) {
+        outcome.effects.push({ effect: { ...effect }, fired: false, changes: [], injuries: [] });
+        continue;
+      }
     }
-    applyEffect(next, effect, participantIds);
+    outcome.effects.push(applyEffect(next, effect, participantIds));
   }
   if (choice.delayedEffect) {
     const dueTick = next.clock.tick + choice.delayedEffect.delayTicks;
@@ -1243,17 +1318,19 @@ function selectEventChoice(state: GameState, eventId: EventId, choiceId: string)
         earliestTick,
       });
   }
+  const result = describeOutcome(choice.label, outcome, next.survivors);
   next.choiceRecords.push({
     eventId,
     choiceId: choice.id,
     tick: next.clock.tick,
     participantIds: [...participantIds],
-    result: choice.result,
+    result,
+    outcome: cloneOutcome(outcome),
   });
-  addTurningPoint(next, participantIds, 'choice', choice.result, eventId);
-  next.activeEvent = { ...next.activeEvent!, chosenChoiceId: choice.id, result: choice.result };
+  addTurningPoint(next, participantIds, 'choice', result, eventId);
+  next.activeEvent = { ...next.activeEvent!, chosenChoiceId: choice.id, result, outcome };
   next.status = 'event-result';
-  addHistory(next, 'event', choice.result);
+  addHistory(next, 'event', result);
   return { state: next, accepted: true };
 }
 

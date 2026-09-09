@@ -62,7 +62,7 @@ historical evidence, with the measurement limitation described below.
       the ending interval. See `activateEvent`, `regularEventSpacingTicks`,
       and result acknowledgement in [simulation.ts](../src/game/simulation.ts),
       [tuning.ts](../src/game/tuning.ts), and [simulate.ts](../scripts/simulate.ts).
-- [ ] Show resolved event outcomes and actual applied changes. The result
+- [x] Show resolved event outcomes and actual applied changes. The result
       panel currently repeats authored effects, including conditional ones,
       and stores a fixed result string. A synthetic `fallen-palm` / `reach`
       decision using seed `result-review-1` produced no injury but reported
@@ -70,6 +70,7 @@ historical evidence, with the measurement limitation described below.
       Record which effects occurred and their actual deltas after caps, and
       derive result/history/ending text from that record. Verify both injury
       roll outcomes, capped resource gains, and save/resume of the result.
+      Completed with [issue #4 evidence](evidence/issue-4/README.md).
       See `selectEventChoice` in [simulation.ts](../src/game/simulation.ts)
       and the result panel in [App.tsx](../src/App.tsx).
 - [ ] Audit event promises and risk labels against their effects. In

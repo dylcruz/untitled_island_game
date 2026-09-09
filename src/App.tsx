@@ -1,3 +1,4 @@
+import { describeResolvedEffect } from './game/outcomes';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent, ReactElement } from 'react';
 import { EVENT_BY_ID } from './game/events';
@@ -1361,8 +1362,10 @@ export default function App(): ReactElement {
             <div className="result-details" data-testid="result-details">
               <h3>Immediate impact</h3>
               <ul className="choice-impact-list">
-                {selectedChoice.immediateEffects.map((effect, index) => (
-                  <li key={`result-effect-${index}`}>{formatEffect(effect)}</li>
+                {snapshot.activeEvent?.outcome?.effects.map((effect, index) => (
+                  <li key={`result-effect-${index}`}>
+                    {describeResolvedEffect(effect, snapshot.survivors)}
+                  </li>
                 ))}
               </ul>
               {scheduledForChoice ? (
@@ -1376,8 +1379,7 @@ export default function App(): ReactElement {
                 </p>
               ) : selectedChoice.delayedEffect ? (
                 <p className="choice-follow-up">
-                  Delayed consequence: {selectedChoice.delayedEffect.description} (if it fits before
-                  rescue).
+                  Delayed consequence was not scheduled before rescue.
                 </p>
               ) : null}
               {followUpForChoice && (

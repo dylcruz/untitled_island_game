@@ -344,6 +344,21 @@ describe('versioned local save boundary', () => {
     const envelope = clonedEnvelope();
     const state = envelope.gameState;
     const survivorId = state.survivors[0]!.id;
+    state.status = 'decision';
+    state.activeEvent = {
+      id: 'tide-pools',
+      activatedTick: 0,
+      participantIds: [survivorId],
+      chosenChoiceId: null,
+      result: null,
+    };
+    const resolved = applyCommand(state, {
+      type: 'select-event-choice',
+      eventId: 'tide-pools',
+      choiceId: 'leave-it',
+    }).state;
+    state.choiceRecords = resolved.choiceRecords;
+    state.activeEvent = null;
     state.status = 'defeat';
     state.reservations = [];
     for (const survivor of state.survivors) {
@@ -351,13 +366,6 @@ describe('versioned local save boundary', () => {
       survivor.activeTask = null;
       survivor.needs.health = 0;
     }
-    state.choiceRecords.push({
-      eventId: 'tide-pools',
-      choiceId: 'leave-it',
-      tick: 0,
-      participantIds: [survivorId],
-      result: 'The group avoids the slippery rocks.',
-    });
     state.turningPoints.push({
       id: 'turning-terminal-choice',
       tick: 0,

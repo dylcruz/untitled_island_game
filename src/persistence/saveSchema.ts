@@ -1,3 +1,4 @@
+import { describeOutcome } from '../game/outcomes';
 import { AUTHORED_WAYPOINTS } from '../game/island';
 import { EVENT_BY_ID, eventRegistryForMode } from '../game/events';
 import { cloneGameState } from '../game/simulation';
@@ -6,6 +7,8 @@ import { TRAIT_BY_ID, productivityMultiplier, traitsAreCompatible } from '../gam
 import { RISK_PROBABILITY_RANGES, RULES_VERSION, TUNING, validateGameConfig } from '../game/tuning';
 import type {
   EventDefinition,
+  EventChoiceDefinition,
+  ResolvedOutcome,
   EffectData,
   GameState,
   RandomStreamState,
@@ -16,7 +19,7 @@ import type {
   WaypointId,
 } from '../game/types';
 
-export const SAVE_SCHEMA_VERSION = 1 as const;
+export const SAVE_SCHEMA_VERSION = 2 as const;
 export const SAVE_STORAGE_KEY = 'untitled-island:resume';
 export const SLICE_SAVE_STORAGE_KEY = 'untitled-island:internal-slice';
 export const MAX_SAVE_BYTES = 512 * 1024;
@@ -26,13 +29,13 @@ export function isSavePayloadWithinLimit(raw: string): boolean {
   return new TextEncoder().encode(raw).byteLength <= MAX_SAVE_BYTES;
 }
 
-export interface SaveEnvelopeV1 {
+export interface SaveEnvelopeV2 {
   schemaVersion: typeof SAVE_SCHEMA_VERSION;
   rulesVersion: string;
   savedAt: string;
   gameState: GameState;
 }
-export type SaveEnvelope = SaveEnvelopeV1;
+export type SaveEnvelope = SaveEnvelopeV2;
 export type SaveFailureReason =
   | 'missing'
   | 'payload-too-large'
@@ -251,6 +254,104 @@ function isAuthoritativeChoice(choice: EventDefinition['choices'][number]): bool
     if (effect.probability !== undefined && effect.riskLevel !== choice.risk.level) return false;
   }
   return true;
+}
+
+function isOutcome(
+  value: unknown,
+  choice: EventChoiceDefinition,
+  participants: readonly string[],
+  survivors: SurvivorState[],
+  rescueTick: number,
+): value is ResolvedOutcome {
+  if (
+    !isRecord(value) ||
+    !Array.isArray(value.effects) ||
+    value.effects.length !== choice.immediateEffects.length
+  )
+    return false;
+  return value.effects.every((entry, index) => {
+    const effect = choice.immediateEffects[index]!;
+    if (
+      !isRecord(entry) ||
+      !isEffect(entry.effect) ||
+      !effectsMatch(entry.effect as EffectData, effect) ||
+      typeof entry.fired !== 'boolean' ||
+      !Array.isArray(entry.changes) ||
+      !Array.isArray(entry.injuries)
+    )
+      return false;
+    if (!entry.fired)
+      return (
+        effect.probability !== undefined &&
+        effect.probability < 1 &&
+        entry.changes.length === 0 &&
+        entry.injuries.length === 0
+      );
+    if (effect.probability === 0) return false;
+    const global = effect.kind === 'resource' || effect.kind === 'shelter';
+    const allowedIds =
+      effect.targetScope === 'group'
+        ? survivors.map((s) => s.id)
+        : participants.length
+          ? participants
+          : survivors.slice(0, 1).map((s) => s.id);
+    const ids = new Set<string | undefined>();
+    if (global && entry.changes.length !== 1) return false;
+    if (!global && entry.changes.length > allowedIds.length) return false;
+    for (const change of entry.changes) {
+      if (!isRecord(change)) return false;
+      const kind = effect.kind === 'injury' ? 'morale' : effect.kind;
+      const target = kind === 'resource' || kind === 'need' ? effect.target : undefined;
+      const maximum =
+        kind === 'resource' ? TUNING.resourceCaps[target as keyof typeof TUNING.resourceCaps] : 100;
+      const amount =
+        effect.kind === 'injury'
+          ? -Math.min(3, Math.max(1, Math.round(effect.amount))) * 5
+          : effect.amount;
+      if (
+        change.kind !== kind ||
+        change.target !== target ||
+        !isBounded(change.before, maximum) ||
+        !isBounded(change.after, maximum) ||
+        change.delta !== (change.after as number) - (change.before as number) ||
+        change.after !== Math.min(maximum, Math.max(0, (change.before as number) + amount))
+      )
+        return false;
+      if (
+        global ? change.survivorId !== undefined : !allowedIds.includes(change.survivorId as string)
+      )
+        return false;
+      const id = change.survivorId as string | undefined;
+      if (ids.has(id)) return false;
+      ids.add(id);
+    }
+    if (
+      !global &&
+      allowedIds.some((id) => survivors.some((s) => s.id === id && s.alive) && !ids.has(id))
+    )
+      return false;
+    if (effect.kind !== 'injury') return entry.injuries.length === 0;
+    if (entry.injuries.length !== entry.changes.length) return false;
+    const injuryIds = new Set<string>();
+    return entry.injuries.every((injury) => {
+      if (
+        !isRecord(injury) ||
+        !ids.has(injury.survivorId as string) ||
+        injuryIds.has(injury.survivorId as string) ||
+        (injury.before !== null && !isInjury(injury.before, rescueTick)) ||
+        !isInjury(injury.after, rescueTick)
+      )
+        return false;
+      injuryIds.add(injury.survivorId as string);
+      const after = injury.after as SurvivorState['injury'];
+      const severity = Math.min(3, Math.max(1, Math.round(effect.amount)));
+      return (
+        after!.kind === effect.target &&
+        after!.severity === severity &&
+        after!.recoveryTicksRemaining === TUNING.injury.baseRecoveryTicks * severity
+      );
+    });
+  });
 }
 
 function effectsMatch(left: EffectData, right: EffectData): boolean {
@@ -575,7 +676,8 @@ function isValidGameState(value: unknown): value is GameState {
       (activeEvent.chosenChoiceId !== null &&
         !choiceDefinitionFor(config.mode, activeEvent.id, activeEvent.chosenChoiceId)) ||
       (activeEvent.chosenChoiceId !== null && !isNonEmptyString(activeEvent.chosenChoiceId)) ||
-      (activeEvent.chosenChoiceId === null && activeEvent.result !== null) ||
+      (activeEvent.chosenChoiceId === null &&
+        (activeEvent.result !== null || activeEvent.outcome !== undefined)) ||
       (activeEvent.chosenChoiceId !== null && !isNonEmptyString(activeEvent.result))
     )
       return false;
@@ -585,7 +687,71 @@ function isValidGameState(value: unknown): value is GameState {
         activeEvent.id,
         activeEvent.chosenChoiceId,
       );
-      if (!chosenChoice || activeEvent.result !== chosenChoice.result) return false;
+      if (
+        !chosenChoice ||
+        !isOutcome(
+          activeEvent.outcome,
+          chosenChoice,
+          (activeEvent.participantIds ?? []) as string[],
+          survivors,
+          config.rescueTick,
+        ) ||
+        activeEvent.result !== describeOutcome(chosenChoice.label, activeEvent.outcome, survivors)
+      )
+        return false;
+      // Result checkpoints have not advanced: the last recorded value for each
+      // field must still agree with the authoritative state being resumed.
+      const checked = new Set<string>();
+      for (const entry of [...activeEvent.outcome.effects].reverse()) {
+        for (const change of [...entry.changes].reverse()) {
+          const key = `${change.survivorId ?? 'camp'}:${change.kind}:${change.target ?? ''}`;
+          if (checked.has(key)) continue;
+          checked.add(key);
+          const survivor = survivors.find((s) => s.id === change.survivorId);
+          const actual =
+            change.kind === 'resource'
+              ? resources[change.target as keyof typeof resources]
+              : change.kind === 'shelter'
+                ? shelter.condition
+                : change.kind === 'morale'
+                  ? survivor?.morale
+                  : survivor?.needs[
+                      change.kind === 'health'
+                        ? 'health'
+                        : (change.target as keyof SurvivorState['needs'])
+                    ];
+          if (actual !== change.after) return false;
+        }
+        for (const injury of entry.injuries) {
+          const key = `${injury.survivorId}:injury`;
+          if (checked.has(key)) continue;
+          checked.add(key);
+          const actual = survivors.find((s) => s.id === injury.survivorId)?.injury;
+          if (
+            !actual ||
+            actual.kind !== injury.after.kind ||
+            actual.severity !== injury.after.severity ||
+            actual.recoveryTicksRemaining !== injury.after.recoveryTicksRemaining ||
+            actual.productivityModifier !== injury.after.productivityModifier
+          )
+            return false;
+        }
+      }
+      const record = choiceRecords.find(
+        (record) =>
+          isRecord(record) &&
+          record.eventId === activeEvent.id &&
+          record.choiceId === activeEvent.chosenChoiceId &&
+          record.tick === activeEvent.activatedTick,
+      );
+      if (
+        !record ||
+        !Array.isArray(record.participantIds) ||
+        record.result !== activeEvent.result ||
+        JSON.stringify(record.outcome) !== JSON.stringify(activeEvent.outcome) ||
+        !sameParticipantIds(record.participantIds, (activeEvent.participantIds ?? []) as string[])
+      )
+        return false;
     }
   }
   if (
@@ -733,6 +899,12 @@ function isValidGameState(value: unknown): value is GameState {
         !isFiniteTick(record.tick, clock.tick, config.rescueTick) ||
         !isParticipantIds(record.participantIds, survivors, false) ||
         !isNonEmptyString(record.result)
+      )
+        return false;
+      const choice = choiceDefinitionFor(config.mode, record.eventId, record.choiceId)!;
+      if (
+        !isOutcome(record.outcome, choice, record.participantIds, survivors, config.rescueTick) ||
+        record.result !== describeOutcome(choice.label, record.outcome, survivors)
       )
         return false;
       const key = `${record.eventId}:${record.choiceId}`;
