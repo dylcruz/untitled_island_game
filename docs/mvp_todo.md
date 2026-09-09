@@ -46,7 +46,10 @@ historical evidence, with the measurement limitation described below.
 
 ### Priority 1: Sustain decisions and report consequences accurately
 
-- [ ] Spread the existing 8–10 decisions across the full 14-day arc and reserve
+- Implementation and current verification for issue #3 are recorded in the
+  [full-arc evidence](evidence/issue-3/README.md). All 170,000 full release and
+  sensitivity runs pass pacing and invariant checks, with zero cap losses.
+- [x] Spread the existing 8–10 decisions across the full 14-day arc and reserve
       room for late events and promised follow-ups. In six production runs
       (`ci`, `review-1` through `review-5`) using `conservative` policy `1.0.0`,
       all ten decisions occurred by tick 4,590 (7.65 elapsed days), leaving

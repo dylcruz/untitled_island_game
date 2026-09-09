@@ -424,10 +424,10 @@ describe('M2 deterministic production core', () => {
   });
 
   it('completes a playable deterministic 14-day run with bounded decision gaps and serializable metrics', () => {
-    const state = autoRun('m2-full-run', true);
+    const state = autoRun('ci', true);
     expect(state.status).toBe('victory');
     expect(state.clock.tick).toBe(8_400);
-    expect(state.metrics.interactiveEventCount).toBeGreaterThanOrEqual(7);
+    expect(state.metrics.interactiveEventCount).toBeGreaterThanOrEqual(8);
     expect(state.metrics.maxDecisionGapTicks).toBeLessThanOrEqual(state.config.ticksPerDay * 2);
     expect(
       state.choiceRecords.some(

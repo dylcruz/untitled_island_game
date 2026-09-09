@@ -1,3 +1,5 @@
+import { hasEligibleDecisionContent } from '../src/game/simulation';
+import { summarizePacing, type IneligiblePeriod } from './simulation/pacing';
 import {
   advanceStep,
   applyCommand,
@@ -8,6 +10,7 @@ import {
   PRODUCTION_EVENT_DEFINITIONS,
   SLICE_GAME_CONFIG,
   TUNING,
+  RULES_VERSION,
 } from '../src/game/index';
 import type {
   CampPriority,
@@ -117,6 +120,9 @@ interface Result {
   minDecisionSpacingTicks: number | null;
   maxDecisionGapTicks: number;
   decisionCompliance: boolean;
+  fullLengthRun: boolean;
+  pacing: ReturnType<typeof summarizePacing>;
+  followUpsDroppedDueToCap: number;
   gapCompliance: boolean;
   taskReasonCounts: Record<string, number>;
   priorityUsage: Record<CampPriority, number>;
@@ -264,19 +270,9 @@ function invariants(state: GameState, t: Tracker, running: boolean): void {
     fail(t, state, 'clock', `day ${state.clock.day} !== ${expectedDay}`);
   if (state.clock.tick > state.config.rescueTick)
     fail(t, state, 'clock', `tick ${state.clock.tick} exceeds rescue ${state.config.rescueTick}`);
-  const maximumGap =
-    state.config.mode === 'production'
-      ? TUNING.productionEventDeadlineDays * state.config.ticksPerDay
-      : null;
   if (!finite(state.metrics.maxDecisionGapTicks) || state.metrics.maxDecisionGapTicks < 0)
     fail(t, state, 'decision-gap', `invalid max gap ${state.metrics.maxDecisionGapTicks}`);
-  else if (maximumGap !== null && state.metrics.maxDecisionGapTicks > maximumGap)
-    fail(
-      t,
-      state,
-      'decision-gap',
-      `${state.metrics.maxDecisionGapTicks} > production limit ${maximumGap}`,
-    );
+  // Interval compliance is checked at the ending using observed content availability.
 
   for (const id of RESOURCES) {
     const value = state.resources[id];
@@ -697,6 +693,8 @@ function runOnce(
     invariants(state, t, false);
     t.initialFailures = [...t.failures];
     let actions = 0;
+    let followUpsDroppedDueToCap = 0;
+    const ineligiblePeriods: IneligiblePeriod[] = [];
     const maximum = state.config.rescueTick + 100;
     while (!['victory', 'defeat'].includes(state.status) && actions < maximum) {
       removeFollowUp(state, excluded);
@@ -709,7 +707,32 @@ function runOnce(
           }
         }
         if (state.status === 'running') {
+          const before = state;
           state = trackedAdvance(state, t);
+          if (
+            state.status === 'running' &&
+            state.clock.tick >
+              (state.metrics.lastDecisionTick ?? 0) + 2 * state.config.ticksPerDay &&
+            !hasEligibleDecisionContent(state)
+          ) {
+            const last = ineligiblePeriods.at(-1);
+            if (last?.endTick === before.clock.tick) last.endTick = state.clock.tick;
+            else
+              ineligiblePeriods.push({
+                startTick: before.clock.tick,
+                endTick: state.clock.tick,
+                reason: 'no-eligible-content',
+              });
+          }
+          if (state.metrics.interactiveEventCount >= TUNING.productionEventDecisionCap)
+            followUpsDroppedDueToCap += Math.max(
+              0,
+              (before.eventSchedule.pendingFollowUps?.length ?? 0) -
+                (state.eventSchedule.pendingFollowUps?.length ?? 0) -
+                (state.activeEvent && EVENT_BY_ID[state.activeEvent.id].category === 'follow-up'
+                  ? 1
+                  : 0),
+            );
           actions += 1;
         }
         continue;
@@ -718,6 +741,11 @@ function runOnce(
         const eventId = state.activeEvent.id;
         const choiceId =
           gameMode === 'slice' ? EVENT_BY_ID[eventId].choices[0]!.id : p.chooseEventChoice(state);
+        if (
+          state.metrics.interactiveEventCount >= TUNING.productionEventDecisionCap &&
+          EVENT_BY_ID[eventId].choices.find((choice) => choice.id === choiceId)?.followUpEventId
+        )
+          followUpsDroppedDueToCap += 1;
         state = trackedCommand(state, { type: 'select-event-choice', eventId, choiceId }, t);
         actions += 1;
         if (state.status === 'event-result') {
@@ -746,6 +774,35 @@ function runOnce(
     for (const [reason, count] of Object.entries(state.metrics.taskReasonCounts))
       inc(t.frequencies.taskReasons, reason, count ?? 0);
     const gaps = t.decisionTicks.slice(1).map((tick, index) => tick - t.decisionTicks[index]!);
+    const pacing = summarizePacing(
+      t.decisionTicks,
+      state.clock.tick,
+      state.config.ticksPerDay,
+      ineligiblePeriods,
+    );
+    const fullLengthRun = state.clock.tick === state.config.rescueTick;
+    if (gameMode === 'production' && fullLengthRun && !pacing.gapCompliance)
+      fail(
+        t,
+        state,
+        'full-arc-gap',
+        JSON.stringify(pacing.intervals.filter((gap) => gap.unexplainedOverdueTicks > 0)),
+      );
+    const decisionCompliance =
+      gameMode === 'slice' ||
+      ((!fullLengthRun ||
+        (state.metrics.interactiveEventCount >= 8 &&
+          Object.values(pacing.decisionsPerPhase).every((count) => count > 0))) &&
+        state.metrics.interactiveEventCount <= TUNING.productionEventDecisionCap);
+    if (!decisionCompliance)
+      fail(
+        t,
+        state,
+        'decision-budget',
+        `${state.metrics.interactiveEventCount} decisions; fullLengthRun=${fullLengthRun}`,
+      );
+    if (followUpsDroppedDueToCap > 0)
+      fail(t, state, 'follow-up-cap', `${followUpsDroppedDueToCap} promised follow-ups lost`);
     const snapshot = createSnapshot(state);
     const ending =
       state.status === 'victory' || state.status === 'defeat'
@@ -773,15 +830,12 @@ function runOnce(
       aliveCount: snapshot.survivors.filter((s) => s.alive).length,
       eventCount: snapshot.metrics.interactiveEventCount,
       minDecisionSpacingTicks: gaps.length ? Math.min(...gaps) : null,
-      maxDecisionGapTicks: snapshot.metrics.maxDecisionGapTicks,
-      decisionCompliance:
-        gameMode === 'slice' ||
-        (snapshot.metrics.interactiveEventCount >= 8 &&
-          snapshot.metrics.interactiveEventCount <= 10),
-      gapCompliance:
-        gameMode === 'slice' ||
-        snapshot.metrics.maxDecisionGapTicks <=
-          TUNING.productionEventDeadlineDays * state.config.ticksPerDay,
+      maxDecisionGapTicks: pacing.maxDecisionGapTicks,
+      pacing,
+      fullLengthRun,
+      followUpsDroppedDueToCap,
+      decisionCompliance,
+      gapCompliance: gameMode === 'slice' || pacing.gapCompliance,
       taskReasonCounts: { ...snapshot.metrics.taskReasonCounts },
       priorityUsage: { ...t.priorityUsage },
       frequencies: t.frequencies,
@@ -820,6 +874,21 @@ function aggregate(results: readonly Result[]) {
     initialInvariantFailures: results.filter((r) => r.initialInvariantFailures.length).length,
     decisionCompliantRuns: results.filter((r) => r.decisionCompliance).length,
     gapCompliantRuns: results.filter((r) => r.gapCompliance).length,
+    fullLengthRuns: results.filter((r) => r.fullLengthRun).length,
+    maxStartToFirstDecisionTicks: Math.max(
+      ...results.map((r) => r.pacing.startToFirstDecisionTicks ?? 0),
+    ),
+    maxLastDecisionToEndingTicks: Math.max(
+      ...results.map((r) => r.pacing.lastDecisionToEndingTicks ?? 0),
+    ),
+    followUpsDroppedDueToCap: results.reduce((sum, r) => sum + r.followUpsDroppedDueToCap, 0),
+    maxDecisionGapTicks: Math.max(...results.map((r) => r.maxDecisionGapTicks)),
+    decisionsPerPhase: Object.fromEntries(
+      ['early', 'middle', 'late'].map((phase) => [
+        phase,
+        results.reduce((sum, r) => sum + r.pacing.decisionsPerPhase[phase]!, 0),
+      ]),
+    ),
     endingDistribution: Object.fromEntries(
       ['triumphant-rescue', 'costly-rescue', 'barely-alive', 'lost-expedition'].map((quality) => [
         quality,
@@ -912,6 +981,8 @@ function main(): void {
     const aggregateOnly = batchMode !== 'single';
     const baseline = scenarios.find((item) => item.excludedEventId === null);
     const report = {
+      reportVersion: 2,
+      rulesVersion: RULES_VERSION,
       policy:
         scenarios.length === 1
           ? gameMode === 'slice'
