@@ -1,0 +1,191 @@
+
+> untitled-island-game@0.1.0 test:e2e
+> playwright test
+
+[WebServer] (node:76382) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+
+Running 42 tests using 10 workers
+
+(node:76451) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:76437) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:76440) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/42] [desktop] › e2e/m3-presentation.spec.ts:3:1 › presents the authored island, distinct survivor portraits, and production history
+(node:76468) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[2/42] [desktop] › e2e/m0-foundation.spec.ts:3:1 › renders the authored island and three accessible survivor placeholders
+(node:76470) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[3/42] [desktop] › e2e/m1-slice.spec.ts:3:1 › pauses for decisions, shows results, and completes the shortened slice
+(node:76482) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:76445) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:76438) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[4/42] [desktop] › e2e/m4-browser.spec.ts:65:1 › checkpoint write failures are exposed as accessible alerts
+[5/42] [desktop] › e2e/m2-production.spec.ts:3:1 › shows the three-survivor production loop and pauses for its first decision
+[6/42] [desktop] › e2e/m2-production.spec.ts:36:1 › keeps the production controls usable at a 360px viewport
+(node:76476) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[7/42] [desktop] › e2e/m4-browser.spec.ts:51:1 › production setup exposes a deterministic seed and starts a run
+[8/42] [desktop] › e2e/m0-foundation.spec.ts:17:1 › begin and accelerated speed advance the fixed-step clock
+(node:76457) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[9/42] [desktop] › e2e/m4-browser.spec.ts:76:1 › running checkpoints reopen through Resume and replacement is confirmed
+[10/42] [desktop] › e2e/m3-presentation.spec.ts:76:1 › keeps M3 presentation readable and keyboard-usable at 360px
+[11/42] [desktop] › e2e/m4-browser.spec.ts:95:1 › invalid production checkpoints have an accessible recovery path
+[12/42] [desktop] › e2e/m4-browser.spec.ts:106:1 › a saved decision reopens paused at its exact state
+[13/42] [desktop] › e2e/m4-browser.spec.ts:128:1 › oversized checkpoints announce recovery and allow a fresh run
+[14/42] [desktop] › e2e/m4-browser.spec.ts:140:1 › event-result checkpoints resume exactly and remain paused
+[15/42] [desktop] › e2e/m4-browser.spec.ts:157:3 › unacknowledged victory checkpoints survive reload and acknowledgement clears storage
+[16/42] [desktop] › e2e/m4-browser.spec.ts:157:3 › unacknowledged defeat checkpoints survive reload and acknowledgement clears storage
+[17/42] [desktop] › e2e/m4-browser.spec.ts:182:1 › ending restart actions preserve or replace the seed explicitly
+[18/42] [desktop] › e2e/m4-browser.spec.ts:202:1 › mobile touch flow covers setup, controls, decision, and continue targets
+[19/42] [desktop] › e2e/m4-browser.spec.ts:253:1 › visibility interruption checkpoints without catch-up drift
+[20/42] [desktop] › e2e/m4-browser.spec.ts:287:3 › wide dashboard stays within the 1440px viewport
+[21/42] [desktop] › e2e/m4-browser.spec.ts:287:3 › wide dashboard stays within the 1920px viewport
+(node:77616) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[22/42] [mobile] › e2e/m0-foundation.spec.ts:17:1 › begin and accelerated speed advance the fixed-step clock
+(node:77609) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[23/42] [mobile] › e2e/m0-foundation.spec.ts:3:1 › renders the authored island and three accessible survivor placeholders
+(node:77625) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[24/42] [mobile] › e2e/m1-slice.spec.ts:3:1 › pauses for decisions, shows results, and completes the shortened slice
+[25/42] [mobile] › e2e/m2-production.spec.ts:36:1 › keeps the production controls usable at a 360px viewport
+[26/42] [mobile] › e2e/m3-presentation.spec.ts:3:1 › presents the authored island, distinct survivor portraits, and production history
+(node:77897) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[27/42] [mobile] › e2e/m2-production.spec.ts:3:1 › shows the three-survivor production loop and pauses for its first decision
+[28/42] [mobile] › e2e/m3-presentation.spec.ts:76:1 › keeps M3 presentation readable and keyboard-usable at 360px
+(node:78081) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[29/42] [mobile] › e2e/m4-browser.spec.ts:51:1 › production setup exposes a deterministic seed and starts a run
+(node:78089) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:78097) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[30/42] [mobile] › e2e/m4-browser.spec.ts:65:1 › checkpoint write failures are exposed as accessible alerts
+[31/42] [mobile] › e2e/m4-browser.spec.ts:76:1 › running checkpoints reopen through Resume and replacement is confirmed
+[32/42] [mobile] › e2e/m4-browser.spec.ts:95:1 › invalid production checkpoints have an accessible recovery path
+[33/42] [mobile] › e2e/m4-browser.spec.ts:106:1 › a saved decision reopens paused at its exact state
+[34/42] [mobile] › e2e/m4-browser.spec.ts:128:1 › oversized checkpoints announce recovery and allow a fresh run
+[35/42] [mobile] › e2e/m4-browser.spec.ts:157:3 › unacknowledged victory checkpoints survive reload and acknowledgement clears storage
+  1) [desktop] › e2e/m4-browser.spec.ts:287:3 › wide dashboard stays within the 1440px viewport ────
+
+    Error: expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 900
+    Received:    931
+
+      337 |     };
+      338 |     expect(metrics.scrollWidth).toBeLessThanOrEqual(viewport.width);
+    > 339 |     expect(metrics.scrollHeight).toBeLessThanOrEqual(metrics.innerHeight);
+          |                                  ^
+      340 |     expect(metrics.layout.split(' ').length).toBe(3);
+      341 |     expect(metrics.cards).toHaveLength(3);
+      342 |     for (const rect of metrics.cards) {
+        at /home/dylan/Projects/games/untitled_island_game/e2e/m4-browser.spec.ts:339:34
+
+    Error Context: test-results/m4-browser-wide-dashboard-stays-within-the-1440px-viewport-desktop/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/m4-browser-wide-dashboard-stays-within-the-1440px-viewport-desktop/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/m4-browser-wide-dashboard-stays-within-the-1440px-viewport-desktop/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[36/42] [mobile] › e2e/m4-browser.spec.ts:182:1 › ending restart actions preserve or replace the seed explicitly
+[37/42] [mobile] › e2e/m4-browser.spec.ts:202:1 › mobile touch flow covers setup, controls, decision, and continue targets
+(node:78420) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[38/42] [mobile] › e2e/m4-browser.spec.ts:140:1 › event-result checkpoints resume exactly and remain paused
+(node:78433) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[39/42] [mobile] › e2e/m4-browser.spec.ts:157:3 › unacknowledged defeat checkpoints survive reload and acknowledgement clears storage
+[40/42] [mobile] › e2e/m4-browser.spec.ts:287:3 › wide dashboard stays within the 1440px viewport
+[41/42] [mobile] › e2e/m4-browser.spec.ts:287:3 › wide dashboard stays within the 1920px viewport
+(node:78658) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[42/42] [mobile] › e2e/m4-browser.spec.ts:253:1 › visibility interruption checkpoints without catch-up drift
+  2) [mobile] › e2e/m4-browser.spec.ts:287:3 › wide dashboard stays within the 1440px viewport ─────
+
+    Error: expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 900
+    Received:    935
+
+      337 |     };
+      338 |     expect(metrics.scrollWidth).toBeLessThanOrEqual(viewport.width);
+    > 339 |     expect(metrics.scrollHeight).toBeLessThanOrEqual(metrics.innerHeight);
+          |                                  ^
+      340 |     expect(metrics.layout.split(' ').length).toBe(3);
+      341 |     expect(metrics.cards).toHaveLength(3);
+      342 |     for (const rect of metrics.cards) {
+        at /home/dylan/Projects/games/untitled_island_game/e2e/m4-browser.spec.ts:339:34
+
+    Error Context: test-results/m4-browser-wide-dashboard-stays-within-the-1440px-viewport-mobile/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/m4-browser-wide-dashboard-stays-within-the-1440px-viewport-mobile/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/m4-browser-wide-dashboard-stays-within-the-1440px-viewport-mobile/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+  2 failed
+    [desktop] › e2e/m4-browser.spec.ts:287:3 › wide dashboard stays within the 1440px viewport ─────
+    [mobile] › e2e/m4-browser.spec.ts:287:3 › wide dashboard stays within the 1440px viewport ──────
+  1 skipped
+  39 passed (12.9s)

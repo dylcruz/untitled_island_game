@@ -817,7 +817,13 @@ function regularEventSpacingTicks(state: GameState): number {
 
 function earliestRegularEventTick(state: GameState): number {
   const previous = state.metrics.lastDecisionTick;
-  return previous === null ? state.clock.tick : previous + regularEventSpacingTicks(state);
+  const minimum = previous === null ? state.clock.tick : previous + regularEventSpacingTicks(state);
+  if (state.config.mode === 'slice') return minimum;
+  const slot = TUNING.productionEventSlotDays[state.metrics.interactiveEventCount];
+  return Math.max(
+    minimum,
+    slot === undefined ? state.config.rescueTick : Math.round(slot * state.config.ticksPerDay),
+  );
 }
 
 function scheduleProductionRetry(state: GameState): void {
@@ -842,6 +848,35 @@ function scheduleProductionRetry(state: GameState): void {
   state.eventSchedule.nextEventTick = candidates.length ? Math.min(...candidates) : null;
 }
 
+// Reserve one slot for each queued promise and one for any promise this root can make.
+function hasRootBudget(state: GameState, event: EventDefinition): boolean {
+  if (state.config.mode === 'slice') return true;
+  const promises = event.choices.some((choice) => choice.followUpEventId) ? 1 : 0;
+  return (
+    state.metrics.interactiveEventCount +
+      (state.eventSchedule.pendingFollowUps?.length ?? 0) +
+      1 +
+      promises <=
+      TUNING.productionEventDecisionCap &&
+    (!promises || state.clock.tick + regularEventSpacingTicks(state) < state.config.rescueTick)
+  );
+}
+
+/** Read-only diagnostic: content availability at the hard deadline, without pacing/cap gates. */
+export function hasEligibleDecisionContent(state: GameState): boolean {
+  return eventRegistryForMode(state.config.mode).some((event) =>
+    event.category === 'follow-up'
+      ? (state.eventSchedule.pendingFollowUps ?? []).some(
+          (follow) => follow.eventId === event.id && follow.earliestTick <= state.clock.tick,
+        ) && eligibleEvent(state, event)
+      : selectionWeight(state, event) > 0 &&
+        eligibleEvent(state, event, {
+          ignorePhase: true,
+          allowReplay: event.cooldownDays !== undefined,
+        }),
+  );
+}
+
 function activateEvent(state: GameState): void {
   if (
     state.activeEvent ||
@@ -849,6 +884,14 @@ function activateEvent(state: GameState): void {
     state.clock.tick < state.eventSchedule.nextEventTick
   )
     return;
+  if (
+    state.config.mode === 'production' &&
+    state.metrics.lastDecisionTick === null &&
+    !hasPotentialFutureEvent(state)
+  ) {
+    state.eventSchedule.nextEventTick = null;
+    return;
+  }
   if (state.config.mode === 'production' && state.clock.tick < earliestRegularEventTick(state)) {
     state.eventSchedule.nextEventTick = earliestRegularEventTick(state);
     return;
@@ -879,6 +922,7 @@ function activateEvent(state: GameState): void {
     (event) =>
       eligibleEvent(state, event) &&
       event.category !== 'follow-up' &&
+      hasRootBudget(state, event) &&
       selectionWeight(state, event) > 0,
   );
   if (!selected && eligible.length) {
@@ -901,6 +945,7 @@ function activateEvent(state: GameState): void {
     let deadlineEligible = registry.filter(
       (event) =>
         event.category !== 'follow-up' &&
+        hasRootBudget(state, event) &&
         selectionWeight(state, event) > 0 &&
         eligibleEvent(state, event, { ignorePhase: true }),
     );
@@ -912,6 +957,7 @@ function activateEvent(state: GameState): void {
       deadlineEligible = registry.filter(
         (event) =>
           event.category !== 'follow-up' &&
+          hasRootBudget(state, event) &&
           event.cooldownDays !== undefined &&
           selectionWeight(state, event) > 0 &&
           eligibleEvent(state, event, { ignorePhase: true, allowReplay: true }),
@@ -1234,7 +1280,10 @@ export function applyCommand(state: GameState, command: GameCommand): CommandRes
     )
       next.eventSchedule.pendingFollowUps = [];
     const spacing = regularEventSpacingTicks(next);
-    const candidate = next.clock.tick + spacing;
+    const candidate =
+      next.config.mode === 'production'
+        ? earliestRegularEventTick(next)
+        : next.clock.tick + spacing;
     const hasMore =
       next.config.mode === 'slice'
         ? next.eventSchedule.usedEventIds.length < eventRegistryForMode('slice').length

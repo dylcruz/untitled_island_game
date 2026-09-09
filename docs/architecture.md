@@ -106,6 +106,12 @@ The event scheduler selects eligible authored templates by phase, cooldown,
 resource, participant, and prior-choice constraints. Production has weighted
 root events, queued follow-ups, and a decision cap; choosing an event can apply
 immediate effects, schedule a delayed effect, and queue a linked follow-up.
+Production rules `mvp-arc-1` open ten shared decision slots across the
+14-day arc (planned early/middle/late allocation 3/4/3). Ready follow-ups take
+priority and reserve remaining budget; roots that can promise follow-ups need
+room for those promises. Delayed slots retain the 0.8-day minimum spacing.
+See [issue #3 evidence](evidence/issue-3/README.md) for allocation, boundary-gap
+reporting, and completed full-batch balance checks.
 Interactive decisions set `status` to `decision`; the result remains visible as
 `event-result` until an acknowledgement command. Definitions and the mode
 registry live in [`src/game/events.ts`](../src/game/events.ts#L16-L113), while

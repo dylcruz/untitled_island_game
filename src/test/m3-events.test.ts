@@ -230,6 +230,6 @@ describe('M3 event content and authoritative scheduling', () => {
     expect(restored.ok).toBe(true);
     if (!restored.ok) return;
     expect(JSON.parse(JSON.stringify(restored.state))).toEqual(restored.state);
-    expect(restored.state.config.rulesVersion).toBe('m5-balance-1');
+    expect(restored.state.config.rulesVersion).toBe('mvp-arc-1');
   });
 });

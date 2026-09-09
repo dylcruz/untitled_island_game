@@ -1,0 +1,20 @@
+{
+  "baseCommit": "853eea89668e774ad2b686ca39821fe13a0a05ee",
+  "branch": "feat/issue-3-full-arc-pacing",
+  "rulesVersion": "mvp-arc-1",
+  "nodeVersion": "24.20.0",
+  "recordedAt": "2026-09-09T04:03:31.532761+00:00",
+  "sha256": {
+    "src/game/simulation.ts": "9a3dde4e7fd3d386332e6c932bbfce591145ef5cd92c46a4aea3670806260e0c",
+    "src/game/tuning.ts": "23ebe9f9e17d63d141cbb6f63e865787bbebfeb70f6d9926219a2f8557ac9003",
+    "scripts/simulate.ts": "8c57e819b5281c1a70e1f48e54596b75fd87f65516023fc2b59a049bf9764f25",
+    "scripts/simulation/pacing.ts": "295a47fcacc9a9aab66e06d7e566edeb2a8dd56f98d3e926c8fd1d05afd49f30",
+    "scripts/simulation/policies.ts": "bc5f94baaa402cc9a3b0ebbb1c00002ba9f326c3434c694e073db2c83985d039",
+    "scripts/manifests/m5-release-v1.json": "c92cee3cd780227a69bf2b01580a1d7a42488f669a6449ad509b5d83f5074440",
+    "src/test/pacing.test.ts": "908b99e5af0ac9bae9747b82eae6658d142a7c086a6e33c5a13a3ed4fe89f5e4",
+    "src/test/m2-core.test.ts": "a9f9983e249176926e93a09252406d0abee0e684daf6b6f8000c28f2658fc42a",
+    "src/test/m3-events.test.ts": "dcda235eabe9ed174896aa176703b1d0224b16b5c3c2f23927837503ef66cc2e",
+    "dist/assets/index-BgjsTry5.js": "4aaea75f8a46c4db9f45a64f5968e7f223f58861942c90f2af14571a6fbbe370",
+    "dist/assets/index-eb5_2CPh.css": "bd50d0c76a039c91957f9673695c1b14b9018906ee8b45192a32ded638643514"
+  }
+}

@@ -1,0 +1,3880 @@
+{
+  "reportVersion": 2,
+  "rulesVersion": "mvp-arc-1",
+  "policy": "m3-conservative",
+  "version": "m3",
+  "mode": "production",
+  "batch": "single",
+  "runs": 5,
+  "seedPrefix": "review",
+  "manifest": null,
+  "manifestSelection": null,
+  "registryRestored": true,
+  "excludedEventIds": [],
+  "invariantThresholds": {
+    "maxTasklessRunningSteps": 180,
+    "maxDecisionGapTicks": 1200
+  },
+  "summary": {
+    "runs": 5,
+    "victories": 5,
+    "victoryRate": 1,
+    "rescueRate": 1,
+    "allSurvivorVictories": 3,
+    "allSurvivorRate": 0.6,
+    "defeats": 0,
+    "invariantFailures": 0,
+    "invariantFailureCount": 0,
+    "initialInvariantFailures": 0,
+    "decisionCompliantRuns": 5,
+    "gapCompliantRuns": 5,
+    "fullLengthRuns": 5,
+    "maxStartToFirstDecisionTicks": 270,
+    "maxLastDecisionToEndingTicks": 570,
+    "followUpsDroppedDueToCap": 0,
+    "maxDecisionGapTicks": 1200,
+    "decisionsPerPhase": {
+      "early": 15,
+      "middle": 20,
+      "late": 15
+    },
+    "endingDistribution": {
+      "triumphant-rescue": 0,
+      "costly-rescue": 0,
+      "barely-alive": 5,
+      "lost-expedition": 0
+    },
+    "deaths": [
+      {
+        "gameSeed": "review-1",
+        "survivorId": "survivor-1",
+        "day": 14,
+        "tick": 8381,
+        "causes": ["thirst", "hunger"]
+      },
+      {
+        "gameSeed": "review-5",
+        "survivorId": "survivor-2",
+        "day": 14,
+        "tick": 8257,
+        "causes": ["thirst", "hunger"]
+      }
+    ],
+    "minima": {
+      "resources": {
+        "water": 0,
+        "food": 0,
+        "materials": 0
+      },
+      "sources": {
+        "water": 0,
+        "forage": 0,
+        "wreckage": 0,
+        "forest": 1
+      }
+    },
+    "frequencies": {
+      "priorities": {
+        "water": 10,
+        "balanced": 5
+      },
+      "rootEvents": {
+        "night-watch": 5,
+        "interior-signal": 5,
+        "forager-instinct": 5,
+        "freshwater-seep": 5,
+        "leaking-roof": 5,
+        "driftwood-cache": 4,
+        "storm-front": 3,
+        "smoke-on-horizon": 4,
+        "fallen-palm": 3,
+        "tide-pools": 4,
+        "water-dispute": 2
+      },
+      "followUps": {
+        "seep-follow-up": 5
+      },
+      "automaticEffects": {},
+      "choices": {
+        "night-watch/sleep-safe": 5,
+        "interior-signal/turn-back": 5,
+        "forager-instinct/trust-instinct": 5,
+        "freshwater-seep/mark-source": 5,
+        "seep-follow-up/collect-carefully": 5,
+        "leaking-roof/patch": 5,
+        "driftwood-cache/leave-wood": 4,
+        "storm-front/wait-it-out": 3,
+        "smoke-on-horizon/conserve": 4,
+        "fallen-palm/move-on": 3,
+        "tide-pools/harvest": 4,
+        "water-dispute/hear-them-out": 2
+      },
+      "taskReasons": {
+        "stock-water": 74,
+        "stock-food": 76,
+        "stock-materials": 43,
+        "low-energy": 7126,
+        "repair-shelter": 23,
+        "night-sleep": 1571,
+        "critical-thirst": 177,
+        "critical-hunger": 159,
+        "critical-health": 4401
+      },
+      "damageByEvent": {},
+      "resourceLossByEvent": {
+        "leaking-roof": 10
+      }
+    }
+  },
+  "scenarios": [
+    {
+      "policyId": "conservative",
+      "policyVersion": "1.0.0",
+      "excludedEventId": null,
+      "summary": {
+        "runs": 5,
+        "victories": 5,
+        "victoryRate": 1,
+        "rescueRate": 1,
+        "allSurvivorVictories": 3,
+        "allSurvivorRate": 0.6,
+        "defeats": 0,
+        "invariantFailures": 0,
+        "invariantFailureCount": 0,
+        "initialInvariantFailures": 0,
+        "decisionCompliantRuns": 5,
+        "gapCompliantRuns": 5,
+        "fullLengthRuns": 5,
+        "maxStartToFirstDecisionTicks": 270,
+        "maxLastDecisionToEndingTicks": 570,
+        "followUpsDroppedDueToCap": 0,
+        "maxDecisionGapTicks": 1200,
+        "decisionsPerPhase": {
+          "early": 15,
+          "middle": 20,
+          "late": 15
+        },
+        "endingDistribution": {
+          "triumphant-rescue": 0,
+          "costly-rescue": 0,
+          "barely-alive": 5,
+          "lost-expedition": 0
+        },
+        "deaths": [
+          {
+            "gameSeed": "review-1",
+            "survivorId": "survivor-1",
+            "day": 14,
+            "tick": 8381,
+            "causes": ["thirst", "hunger"]
+          },
+          {
+            "gameSeed": "review-5",
+            "survivorId": "survivor-2",
+            "day": 14,
+            "tick": 8257,
+            "causes": ["thirst", "hunger"]
+          }
+        ],
+        "minima": {
+          "resources": {
+            "water": 0,
+            "food": 0,
+            "materials": 0
+          },
+          "sources": {
+            "water": 0,
+            "forage": 0,
+            "wreckage": 0,
+            "forest": 1
+          }
+        },
+        "frequencies": {
+          "priorities": {
+            "water": 10,
+            "balanced": 5
+          },
+          "rootEvents": {
+            "night-watch": 5,
+            "interior-signal": 5,
+            "forager-instinct": 5,
+            "freshwater-seep": 5,
+            "leaking-roof": 5,
+            "driftwood-cache": 4,
+            "storm-front": 3,
+            "smoke-on-horizon": 4,
+            "fallen-palm": 3,
+            "tide-pools": 4,
+            "water-dispute": 2
+          },
+          "followUps": {
+            "seep-follow-up": 5
+          },
+          "automaticEffects": {},
+          "choices": {
+            "night-watch/sleep-safe": 5,
+            "interior-signal/turn-back": 5,
+            "forager-instinct/trust-instinct": 5,
+            "freshwater-seep/mark-source": 5,
+            "seep-follow-up/collect-carefully": 5,
+            "leaking-roof/patch": 5,
+            "driftwood-cache/leave-wood": 4,
+            "storm-front/wait-it-out": 3,
+            "smoke-on-horizon/conserve": 4,
+            "fallen-palm/move-on": 3,
+            "tide-pools/harvest": 4,
+            "water-dispute/hear-them-out": 2
+          },
+          "taskReasons": {
+            "stock-water": 74,
+            "stock-food": 76,
+            "stock-materials": 43,
+            "low-energy": 7126,
+            "repair-shelter": 23,
+            "night-sleep": 1571,
+            "critical-thirst": 177,
+            "critical-hunger": 159,
+            "critical-health": 4401
+          },
+          "damageByEvent": {},
+          "resourceLossByEvent": {
+            "leaking-roof": 10
+          }
+        }
+      },
+      "failureRuns": [],
+      "results": [
+        {
+          "seed": "review-1",
+          "gameSeed": "review-1",
+          "policy": "m3-conservative",
+          "policyId": "conservative",
+          "version": "m3",
+          "policyVersion": "1.0.0",
+          "policySeed": "a51f563047ff61344875097d6d7380f516abec19c394f5518cd301149c7cd93d",
+          "excludedEventId": null,
+          "mode": "production",
+          "status": "victory",
+          "tick": 8400,
+          "day": 14,
+          "survivorCount": 3,
+          "aliveCount": 2,
+          "eventCount": 10,
+          "minDecisionSpacingTicks": 840,
+          "maxDecisionGapTicks": 840,
+          "pacing": {
+            "decisionTicks": [270, 1110, 1950, 2790, 3630, 4470, 5310, 6150, 6990, 7830],
+            "startToFirstDecisionTicks": 270,
+            "lastDecisionToEndingTicks": 570,
+            "maxDecisionGapTicks": 840,
+            "decisionsPerPhase": {
+              "early": 3,
+              "middle": 4,
+              "late": 3
+            },
+            "intervals": [
+              {
+                "startTick": 0,
+                "endTick": 270,
+                "ticks": 270,
+                "unexplainedOverdueTicks": 0
+              },
+              {
+                "startTick": 270,
+                "endTick": 1110,
+                "ticks": 840,
+                "unexplainedOverdueTicks": 0
+              },
+              {
+                "startTick": 1110,
+                "endTick": 1950,
+                "ticks": 840,
+                "unexplainedOverdueTicks": 0
+              },
+              {
+                "startTick": 1950,
+                "endTick": 2790,
+                "ticks": 840,
+                "unexplainedOverdueTicks": 0
+              },
+              {
+                "startTick": 2790,
+                "endTick": 3630,
+                "ticks": 840,
+                "unexplainedOverdueTicks": 0
+              },
+              {
+                "startTick": 3630,
+                "endTick": 4470,
+                "ticks": 840,
+                "unexplainedOverdueTicks": 0
+              },
+              {
+                "startTick": 4470,
+                "endTick": 5310,
+                "ticks": 840,
+                "unexplainedOverdueTicks": 0
+              },
+              {
+                "startTick": 5310,
+                "endTick": 6150,
+                "ticks": 840,
+                "unexplainedOverdueTicks": 0
+              },
+              {
+                "startTick": 6150,
+                "endTick": 6990,
+                "ticks": 840,
+                "unexplainedOverdueTicks": 0
+              },
+              {
+                "startTick": 6990,
+                "endTick": 7830,
+                "ticks": 840,
+                "unexplainedOverdueTicks": 0
+              },
+              {
+                "startTick": 7830,
+                "endTick": 8400,
+                "ticks": 570,
+                "unexplainedOverdueTicks": 0
+              }
+            ],
+            "ineligiblePeriods": [],
+            "gapCompliance": true
+          },
+          "fullLengthRun": true,
+          "followUpsDroppedDueToCap": 0,
+          "decisionCompliance": true,
+          "gapCompliance": true,
+          "taskReasonCounts": {
+            "stock-water": 13,
+            "stock-food": 13,
+            "stock-materials": 8,
+            "low-energy": 1383,
+            "repair-shelter": 4,
+            "night-sleep": 300,
+            "critical-thirst": 33,
+            "critical-hunger": 30,
+            "critical-health": 960
+          },
+          "priorityUsage": {
+            "balanced": 1,
+            "water": 2,
+            "food": 0,
+            "build": 0,
+            "recover": 0
+          },
+          "frequencies": {
+            "priorities": {
+              "water": 2,
+              "balanced": 1
+            },
+            "rootEvents": {
+              "night-watch": 1,
+              "interior-signal": 1,
+              "forager-instinct": 1,
+              "freshwater-seep": 1,
+              "leaking-roof": 1,
+              "driftwood-cache": 1,
+              "storm-front": 1,
+              "smoke-on-horizon": 1,
+              "fallen-palm": 1
+            },
+            "followUps": {
+              "seep-follow-up": 1
+            },
+            "automaticEffects": {},
+            "choices": {
+              "night-watch/sleep-safe": 1,
+              "interior-signal/turn-back": 1,
+              "forager-instinct/trust-instinct": 1,
+              "freshwater-seep/mark-source": 1,
+              "seep-follow-up/collect-carefully": 1,
+              "leaking-roof/patch": 1,
+              "driftwood-cache/leave-wood": 1,
+              "storm-front/wait-it-out": 1,
+              "smoke-on-horizon/conserve": 1,
+              "fallen-palm/move-on": 1
+            },
+            "taskReasons": {
+              "stock-water": 13,
+              "stock-food": 13,
+              "stock-materials": 8,
+              "low-energy": 1383,
+              "repair-shelter": 4,
+              "night-sleep": 300,
+              "critical-thirst": 33,
+              "critical-hunger": 30,
+              "critical-health": 960
+            },
+            "damageByEvent": {},
+            "resourceLossByEvent": {
+              "leaking-roof": 2
+            }
+          },
+          "deaths": [
+            {
+              "survivorId": "survivor-1",
+              "day": 14,
+              "tick": 8381,
+              "causes": ["thirst", "hunger"]
+            }
+          ],
+          "maxTasklessRunningSteps": 70,
+          "endingQuality": "barely-alive",
+          "minResources": {
+            "water": 0,
+            "food": 0,
+            "materials": 0
+          },
+          "minSources": {
+            "water": 0,
+            "forage": 0,
+            "wreckage": 0,
+            "forest": 3
+          },
+          "initialInvariantFailures": [],
+          "invariantFailures": [],
+          "serializedStateBytes": 13989,
+          "commandTrace": [
+            {
+              "tick": 0,
+              "day": 1,
+              "type": "set-camp-priority",
+              "accepted": true,
+              "priority": "water"
+            },
+            {
+              "tick": 270,
+              "day": 1,
+              "type": "select-event-choice",
+              "accepted": true,
+              "eventId": "night-watch",
+              "choiceId": "sleep-safe"
+            },
+            {
+              "tick": 270,
+              "day": 1,
+              "type": "acknowledge-event-result",
+              "accepted": true,
+              "eventId": "night-watch"
+            },
+            {
+              "tick": 600,
+              "day": 2,
+              "type": "set-camp-priority",
+              "accepted": true,
+              "priority": "balanced"
+            },
+            {
+              "tick": 1110,
+              "day": 2,
+              "type": "select-event-choice",
+              "accepted": true,
+              "eventId": "interior-signal",
+              "choiceId": "turn-back"
+            },
+            {
+              "tick": 1110,
+              "day": 2,
+              "type": "acknowledge-event-result",
+              "accepted": true,
+              "eventId": "interior-signal"
+            },
+            {
+              "tick": 1470,
+              "day": 3,
+              "type": "set-camp-priority",
+              "accepted": true,
+              "priority": "water"
+            },
+            {
+              "tick": 1950,
+              "day": 4,
+              "type": "select-event-choice",
+              "accepted": true,
+              "eventId": "forager-instinct",
+              "choiceId": "trust-instinct"
+            },
+            {
+              "tick": 1950,
+              "day": 4,
+              "type": "acknowledge-event-result",
+              "accepted": true,
+              "eventId": "forager-instinct"
+            },
+            {
+              "tick": 2790,
+              "day": 5,
+              "type": "select-event-choice",
+              "accepted": true,
+              "eventId": "freshwater-seep",
+              "choiceId": "mark-source"
+            },
+            {
+              "tick": 2790,
+              "day": 5,
+              "type": "acknowledge-event-result",
+              "accepted": true,
+              "eventId": "freshwater-seep"
+            },
+            {
+              "tick": 3630,
+              "day": 7,
+              "type": "select-event-choice",
+              "accepted": true,
+              "eventId": "seep-follow-up",
+              "choiceId": "collect-carefully"
+            },
+            {
+              "tick": 3630,
+              "day": 7,
+              "type": "acknowledge-event-result",
+              "accepted": true,
+              "eventId": "seep-follow-up"
+            },
+            {
+              "tick": 4470,
+              "day": 8,
+              "type": "select-event-choice",
+              "accepted": true,
+              "eventId": "leaking-roof",
+              "choiceId": "patch"
+            },
+            {
+              "tick": 4470,
+              "day": 8,
+              "type": "acknowledge-event-result",
+              "accepted": true,
+              "eventId": "leaking-roof"
+            },
+            {
+              "tick": 5310,
+              "day": 9,
+              "type": "select-event-choice",
+              "accepted": true,
+              "eventId": "driftwood-cache",
+              "choiceId": "leave-wood"
+            },
+            {
+              "tick": 5310,
+              "day": 9,
+              "type": "acknowledge-event-result",
+              "accepted": true,
+              "eventId": "driftwood-cache"
+            },
+            {
+              "tick": 6150,
+              "day": 11,
+              "type": "select-event-choice",
+              "accepted": true,
+              "eventId": "storm-front",
+              "choiceId": "wait-it-out"
+            },
+            {
+              "tick": 6150,
+              "day": 11,
+              "type": "acknowledge-event-result",
+              "accepted": true,
+              "eventId": "storm-front"
+            },
+            {
+              "tick": 6990,
+              "day": 12,
+              "type": "select-event-choice",
+              "accepted": true,
+              "eventId": "smoke-on-horizon",
+              "choiceId": "conserve"
+            },
+            {
+              "tick": 6990,
+              "day": 12,
+              "type": "acknowledge-event-result",
+              "accepted": true,
+              "eventId": "smoke-on-horizon"
+            },
+            {
+              "tick": 7830,
+              "day": 14,
+              "type": "select-event-choice",
+              "accepted": true,
+              "eventId": "fallen-palm",
+              "choiceId": "move-on"
+            },
+            {
+              "tick": 7830,
+              "day": 14,
+              "type": "acknowledge-event-result",
+              "accepted": true,
+              "eventId": "fallen-palm"
+            }
+          ]
+        },
+        {
+          "seed": "review-2",
+          "gameSeed": "review-2",
+          "policy": "m3-conservative",
+          "policyId": "conservative",
+          "version": "m3",
+          "policyVersion": "1.0.0",
+          "policySeed": "4d1e66689370279ec7496b879b2c591ffad16db92dcf7038d0eed98d29f2e55b",
+          "excludedEventId": null,
+          "mode": "production",
+          "status": "victory",
+          "tick": 8400,
+          "day": 14,
+          "survivorCount": 3,
+          "aliveCount": 3,
+          "eventCount": 10,
+          "minDecisionSpacingTicks": 840,
+          "maxDecisionGapTicks": 840,
+          "pacing": {
+            "decisionTicks": [270, 1110, 1950, 2790, 3630, 4470, 5310, 6150, 6990, 7830],
+            "startToFirstDecisionTicks": 270,
+            "lastDecisionToEndingTicks": 570,
+            "maxDecisionGapTicks": 840,
+            "decisionsPerPhase": {
+              "early": 3,
+              "middle": 4,
+              "late": 3
+            },
+            "intervals": [
+              {
+                "startTick": 0,
+                "endTick": 270,
+                "ticks": 270,
+                "unexplainedOverdueTicks": 0
+              },
+              {
+                "startTick": 270,
+                "endTick": 1110,
+                "ticks": 840,
+                "unexplainedOverdueTicks": 0
+              },
+              {
+                "startTick": 1110,
+                "endTick": 1950,
+                "ticks": 840,
+                "unexplainedOverdueTicks": 0
+              },
+              {
+                "startTick": 1950,
+                "endTick": 2790,
+                "ticks": 840,
+                "unexplainedOverdueTicks": 0
+              },
+              {
+                "startTick": 2790,
+                "endTick": 3630,
+                "ticks": 840,
+                "unexplainedOverdueTicks": 0
+              },
+              {
+                "startTick": 3630,
+                "endTick": 4470,
+                "ticks": 840,
+                "unexplainedOverdueTicks": 0
+              },
+              {
+                "startTick": 4470,
+                "endTick": 5310,
+                "ticks": 840,
+                "unexplainedOverdueTicks": 0
+              },
+              {
+                "startTick": 5310,
+                "endTick": 6150,
+                "ticks": 840,
+                "unexplainedOverdueTicks": 0
+              },
+              {
+                "startTick": 6150,
+                "endTick": 6990,
+                "ticks": 840,
+                "unexplainedOverdueTicks": 0
+              },
+              {
+                "startTick": 6990,
+                "endTick": 7830,
+                "ticks": 840,
+                "unexplainedOverdueTicks": 0
+              },
+              {
+                "startTick": 7830,
+                "endTick": 8400,
+                "ticks": 570,
+                "unexplainedOverdueTicks": 0
+              }
+            ],
+            "ineligiblePeriods": [],
+            "gapCompliance": true
+          },
+          "fullLengthRun": true,
+          "followUpsDroppedDueToCap": 0,
+          "decisionCompliance": true,
+          "gapCompliance": true,
+          "taskReasonCounts": {
+            "stock-water": 16,
+            "stock-food": 16,
+            "stock-materials": 8,
+            "low-energy": 1536,
+            "repair-shelter": 4,
+            "night-sleep": 338,
+            "critical-thirst": 41,
+            "critical-hunger": 33,
+            "critical-health": 731
+          },
+          "priorityUsage": {
+            "balanced": 1,
+            "water": 2,
+            "food": 0,
+            "build": 0,
+            "recover": 0
+          },
+          "frequencies": {
+            "priorities": {
+              "water": 2,
+              "balanced": 1
+            },
+            "rootEvents": {
+              "interior-signal": 1,
+              "forager-instinct": 1,
+              "tide-pools": 1,
+              "night-watch": 1,
+              "driftwood-cache": 1,
+              "leaking-roof": 1,
+              "freshwater-seep": 1,
+              "smoke-on-horizon": 1,
+              "fallen-palm": 1
+            },
+            "followUps": {
+              "seep-follow-up": 1
+            },
+            "automaticEffects": {},
+            "choices": {
+              "interior-signal/turn-back": 1,
+              "forager-instinct/trust-instinct": 1,
+              "tide-pools/harvest": 1,
+              "night-watch/sleep-safe": 1,
+              "driftwood-cache/leave-wood": 1,
+              "leaking-roof/patch": 1,
+              "freshwater-seep/mark-source": 1,
+              "seep-follow-up/collect-carefully": 1,
+              "smoke-on-horizon/conserve": 1,
+              "fallen-palm/move-on": 1
+            },
+            "taskReasons": {
+              "stock-water": 16,
+              "stock-food": 16,
+              "stock-materials": 8,
+              "low-energy": 1536,
+              "repair-shelter": 4,
+              "night-sleep": 338,
+              "critical-thirst": 41,
+              "critical-hunger": 33,
+              "critical-health": 731
+            },
+            "damageByEvent": {},
+            "resourceLossByEvent": {
+              "leaking-roof": 2
+            }
+          },
+          "deaths": [],
+          "maxTasklessRunningSteps": 93,
+          "endingQuality": "barely-alive",
+          "minResources": {
+            "water": 0,
+            "food": 0,
+            "materials": 0
+          },
+          "minSources": {
+            "water": 0,
+            "forage": 0,
+            "wreckage": 0,
+            "forest": 3
+          },
+          "initialInvariantFailures": [],
+          "invariantFailures": [],
+          "serializedStateBytes": 14120,
+          "commandTrace": [
+            {
+              "tick": 0,
+              "day": 1,
+              "type": "set-camp-priority",
+              "accepted": true,
+              "priority": "water"
+            },
+            {
+              "tick": 270,
+              "day": 1,
+              "type": "select-event-choice",
+              "accepted": true,
+              "eventId": "interior-signal",
+              "choiceId": "turn-back"
+            },
+            {
+              "tick": 270,
+              "day": 1,
+              "type": "acknowledge-event-result",
+              "accepted": true,
+              "eventId": "interior-signal"
+            },
+            {
+              "tick": 600,
+              "day": 2,
+              "type": "set-camp-priority",
+              "accepted": true,
+              "priority": "balanced"
+            },
+            {
+              "tick": 1110,
+              "day": 2,
+              "type": "select-event-choice",
+              "accepted": true,
+              "eventId": "forager-instinct",
+              "choiceId": "trust-instinct"
+            },
+            {
+              "tick": 1110,
+              "day": 2,
+              "type": "acknowledge-event-result",
+              "accepted": true,
+              "eventId": "forager-instinct"
+            },
+            {
+              "tick": 1470,
+              "day": 3,
+              "type": "set-camp-priority",
+              "accepted": true,
+              "priority": "water"
+            },
+            {
+              "tick": 1950,
+              "day": 4,
+              "type": "select-event-choice",
+              "accepted": true,
+              "eventId": "tide-pools",
+              "choiceId": "harvest"
+            },
+            {
+              "tick": 1950,
+              "day": 4,
+              "type": "acknowledge-event-result",
+              "accepted": true,
+              "eventId": "tide-pools"
+            },
+            {
+              "tick": 2790,
+              "day": 5,
+              "type": "select-event-choice",
+              "accepted": true,
+              "eventId": "night-watch",
+              "choiceId": "sleep-safe"
+            },
+            {
+              "tick": 2790,
+              "day": 5,
+              "type": "acknowledge-event-result",
+              "accepted": true,
+              "eventId": "night-watch"
+            },
+            {
+              "tick": 3630,
+              "day": 7,
+              "type": "select-event-choice",
+              "accepted": true,
+              "eventId": "driftwood-cache",
+              "choiceId": "leave-wood"
+            },
+            {
+              "tick": 3630,
+              "day": 7,
+              "type": "acknowledge-event-result",
+              "accepted": true,
+              "eventId": "driftwood-cache"
+            },
+            {
+              "tick": 4470,
+              "day": 8,
+              "type": "select-event-choice",
+              "accepted": true,
+              "eventId": "leaking-roof",
+              "choiceId": "patch"
+            },
+            {
+              "tick": 4470,
+              "day": 8,
+              "type": "acknowledge-event-result",
+              "accepted": true,
+              "eventId": "leaking-roof"
+            },
+            {
+              "tick": 5310,
+              "day": 9,
+              "type": "select-event-choice",
+              "accepted": true,
+              "eventId": "freshwater-seep",
+              "choiceId": "mark-source"
+            },
+            {
+              "tick": 5310,
+              "day": 9,
+              "type": "acknowledge-event-result",
+              "accepted": true,
+              "eventId": "freshwater-seep"
+            },
+            {
+              "tick": 6150,
+              "day": 11,
+              "type": "select-event-choice",
+              "accepted": true,
+              "eventId": "seep-follow-up",
+              "choiceId": "collect-carefully"
+            },
+            {
+              "tick": 6150,
+              "day": 11,
+              "type": "acknowledge-event-result",
+              "accepted": true,
+              "eventId": "seep-follow-up"
+            },
+            {
+              "tick": 6990,
+              "day": 12,
+              "type": "select-event-choice",
+              "accepted": true,
+              "eventId": "smoke-on-horizon",
+              "choiceId": "conserve"
+            },
+            {
+              "tick": 6990,
+              "day": 12,
+              "type": "acknowledge-event-result",
+              "accepted": true,
+              "eventId": "smoke-on-horizon"
+            },
+            {
+              "tick": 7830,
+              "day": 14,
+              "type": "select-event-choice",
+              "accepted": true,
+              "eventId": "fallen-palm",
+              "choiceId": "move-on"
+            },
+            {
+              "tick": 7830,
+              "day": 14,
+              "type": "acknowledge-event-result",
+              "accepted": true,
+              "eventId": "fallen-palm"
+            }
+          ]
+        },
+        {
+          "seed": "review-3",
+          "gameSeed": "review-3",
+          "policy": "m3-conservative",
+          "policyId": "conservative",
+          "version": "m3",
+          "policyVersion": "1.0.0",
+          "policySeed": "661389b8755eb1fc6809c307bc0ddc317bc494264c6c55d79b3a906415bbbbb8",
+          "excludedEventId": null,
+          "mode": "production",
+          "status": "victory",
+          "tick": 8400,
+          "day": 14,
+          "survivorCount": 3,
+          "aliveCount": 3,
+          "eventCount": 10,
+          "minDecisionSpacingTicks": 840,
+          "maxDecisionGapTicks": 1200,
+          "pacing": {
+            "decisionTicks": [270, 1110, 1950, 2790, 3630, 4470, 5310, 6150, 6990, 8190],
+            "startToFirstDecisionTicks": 270,
+            "lastDecisionToEndingTicks": 210,
+            "maxDecisionGapTicks": 1200,
+            "decisionsPerPhase": {
+              "early": 3,
+              "middle": 4,
+              "late": 3
+            },
+            "intervals": [
+              {
+                "startTick": 0,
+                "endTick": 270,
+                "ticks": 270,
+                "unexplainedOverdueTicks": 0
+              },
+              {
+                "startTick": 270,
+                "endTick": 1110,
+                "ticks": 840,
+                "unexplainedOverdueTicks": 0
+              },
+              {
+                "startTick": 1110,
+                "endTick": 1950,
+                "ticks": 840,
+                "unexplainedOverdueTicks": 0
+              },
+              {
+                "startTick": 1950,
+                "endTick": 2790,
+                "ticks": 840,
+                "unexplainedOverdueTicks": 0
+              },
+              {
+                "startTick": 2790,
+                "endTick": 3630,
+                "ticks": 840,
+                "unexplainedOverdueTicks": 0
+              },
+              {
+                "startTick": 3630,
+                "endTick": 4470,
+                "ticks": 840,
+                "unexplainedOverdueTicks": 0
+              },
+              {
+                "startTick": 4470,
+                "endTick": 5310,
+                "ticks": 840,
+                "unexplainedOverdueTicks": 0
+              },
+              {
+                "startTick": 5310,
+                "endTick": 6150,
+                "ticks": 840,
+                "unexplainedOverdueTicks": 0
+              },
+              {
+                "startTick": 6150,
+                "endTick": 6990,
+                "ticks": 840,
+                "unexplainedOverdueTicks": 0
+              },
+              {
+                "startTick": 6990,
+                "endTick": 8190,
+                "ticks": 1200,
+                "unexplainedOverdueTicks": 0
+              },
+              {
+                "startTick": 8190,
+                "endTick": 8400,
+                "ticks": 210,
+                "unexplainedOverdueTicks": 0
+              }
+            ],
+            "ineligiblePeriods": [],
+            "gapCompliance": true
+          },
+          "fullLengthRun": true,
+          "followUpsDroppedDueToCap": 0,
+          "decisionCompliance": true,
+          "gapCompliance": true,
+          "taskReasonCounts": {
+            "stock-water": 16,
+            "stock-food": 17,
+            "stock-materials": 9,
+            "low-energy": 1471,
+            "repair-shelter": 4,
+            "night-sleep": 318,
+            "critical-thirst": 36,
+            "critical-hunger": 36,
+            "critical-health": 817
+          },
+          "priorityUsage": {
+            "balanced": 1,
+            "water": 2,
+            "food": 0,
+            "build": 0,
+            "recover": 0
+          },
+          "frequencies": {
+            "priorities": {
+              "water": 2,
+              "balanced": 1
+            },
+            "rootEvents": {
+              "interior-signal": 1,
+              "tide-pools": 1,
+              "freshwater-seep": 1,
+              "night-watch": 1,
+              "leaking-roof": 1,
+              "storm-front": 1,
+              "fallen-palm": 1,
+              "driftwood-cache": 1,
+              "forager-instinct": 1
+            },
+            "followUps": {
+              "seep-follow-up": 1
+            },
+            "automaticEffects": {},
+            "choices": {
+              "interior-signal/turn-back": 1,
+              "tide-pools/harvest": 1,
+              "freshwater-seep/mark-source": 1,
+              "seep-follow-up/collect-carefully": 1,
+              "night-watch/sleep-safe": 1,
+              "leaking-roof/patch": 1,
+              "storm-front/wait-it-out": 1,
+              "fallen-palm/move-on": 1,
+              "driftwood-cache/leave-wood": 1,
+              "forager-instinct/trust-instinct": 1
+            },
+            "taskReasons": {
+              "stock-water": 16,
+              "stock-food": 17,
+              "stock-materials": 9,
+              "low-energy": 1471,
+              "repair-shelter": 4,
+              "night-sleep": 318,
+              "critical-thirst": 36,
+              "critical-hunger": 36,
+              "critical-health": 817
+            },
+            "damageByEvent": {},
+            "resourceLossByEvent": {
+              "leaking-roof": 2
+            }
+          },
+          "deaths": [],
+          "maxTasklessRunningSteps": 93,
+          "endingQuality": "barely-alive",
+          "minResources": {
+            "water": 0,
+            "food": 0,
+            "materials": 0
+          },
+          "minSources": {
+            "water": 0,
+            "forage": 0,
+            "wreckage": 0,
+            "forest": 1
+          },
+          "initialInvariantFailures": [],
+          "invariantFailures": [],
+          "serializedStateBytes": 13350,
+          "commandTrace": [
+            {
+              "tick": 0,
+              "day": 1,
+              "type": "set-camp-priority",
+              "accepted": true,
+              "priority": "water"
+            },
+            {
+              "tick": 270,
+              "day": 1,
+              "type": "select-event-choice",
+              "accepted": true,
+              "eventId": "interior-signal",
+              "choiceId": "turn-back"
+            },
+            {
+              "tick": 270,
+              "day": 1,
+              "type": "acknowledge-event-result",
+              "accepted": true,
+              "eventId": "interior-signal"
+            },
+            {
+              "tick": 600,
+              "day": 2,
+              "type": "set-camp-priority",
+              "accepted": true,
+              "priority": "balanced"
+            },
+            {
+              "tick": 1110,
+              "day": 2,
+              "type": "select-event-choice",
+              "accepted": true,
+              "eventId": "tide-pools",
+              "choiceId": "harvest"
+            },
+            {
+              "tick": 1110,
+              "day": 2,
+              "type": "acknowledge-event-result",
+              "accepted": true,
+              "eventId": "tide-pools"
+            },
+            {
+              "tick": 1470,
+              "day": 3,
+              "type": "set-camp-priority",
+              "accepted": true,
+              "priority": "water"
+            },
+            {
+              "tick": 1950,
+              "day": 4,
+              "type": "select-event-choice",
+              "accepted": true,
+              "eventId": "freshwater-seep",
+              "choiceId": "mark-source"
+            },
+            {
+              "tick": 1950,
+              "day": 4,
+              "type": "acknowledge-event-result",
+              "accepted": true,
+              "eventId": "freshwater-seep"
+            },
+            {
+              "tick": 2790,
+              "day": 5,
+              "type": "select-event-choice",
+              "accepted": true,
+              "eventId": "seep-follow-up",
+              "choiceId": "collect-carefully"
+            },
+            {
+              "tick": 2790,
+              "day": 5,
+              "type": "acknowledge-event-result",
+              "accepted": true,
+              "eventId": "seep-follow-up"
+            },
+            {
+              "tick": 3630,
+              "day": 7,
+              "type": "select-event-choice",
+              "accepted": true,
+              "eventId": "night-watch",
+              "choiceId": "sleep-safe"
+            },
+            {
+              "tick": 3630,
+              "day": 7,
+              "type": "acknowledge-event-result",
+              "accepted": true,
+              "eventId": "night-watch"
+            },
+            {
+              "tick": 4470,
+              "day": 8,
+              "type": "select-event-choice",
+              "accepted": true,
+              "eventId": "leaking-roof",
+              "choiceId": "patch"
+            },
+            {
+              "tick": 4470,
+              "day": 8,
+              "type": "acknowledge-event-result",
+              "accepted": true,
+              "eventId": "leaking-roof"
+            },
+            {
+              "tick": 5310,
+              "day": 9,
+              "type": "select-event-choice",
+              "accepted": true,
+              "eventId": "storm-front",
+              "choiceId": "wait-it-out"
+            },
+            {
+              "tick": 5310,
+              "day": 9,
+              "type": "acknowledge-event-result",
+              "accepted": true,
+              "eventId": "storm-front"
+            },
+            {
+              "tick": 6150,
+              "day": 11,
+              "type": "select-event-choice",
+              "accepted": true,
+              "eventId": "fallen-palm",
+              "choiceId": "move-on"
+            },
+            {
+              "tick": 6150,
+              "day": 11,
+              "type": "acknowledge-event-result",
+              "accepted": true,
+              "eventId": "fallen-palm"
+            },
+            {
+              "tick": 6990,
+              "day": 12,
+              "type": "select-event-choice",
+              "accepted": true,
+              "eventId": "driftwood-cache",
+              "choiceId": "leave-wood"
+            },
+            {
+              "tick": 6990,
+              "day": 12,
+              "type": "acknowledge-event-result",
+              "accepted": true,
+              "eventId": "driftwood-cache"
+            },
+            {
+              "tick": 8190,
+              "day": 14,
+              "type": "select-event-choice",
+              "accepted": true,
+              "eventId": "forager-instinct",
+              "choiceId": "trust-instinct"
+            },
+            {
+              "tick": 8190,
+              "day": 14,
+              "type": "acknowledge-event-result",
+              "accepted": true,
+              "eventId": "forager-instinct"
+            }
+          ]
+        },
+        {
+          "seed": "review-4",
+          "gameSeed": "review-4",
+          "policy": "m3-conservative",
+          "policyId": "conservative",
+          "version": "m3",
+          "policyVersion": "1.0.0",
+          "policySeed": "2979ba670253d60bbab0f2aecfcd3e142ea6cb3e50a8a32078d59ace5b01298e",
+          "excludedEventId": null,
+          "mode": "production",
+          "status": "victory",
+          "tick": 8400,
+          "day": 14,
+          "survivorCount": 3,
+          "aliveCount": 3,
+          "eventCount": 10,
+          "minDecisionSpacingTicks": 840,
+          "maxDecisionGapTicks": 840,
+          "pacing": {
+            "decisionTicks": [270, 1110, 1950, 2790, 3630, 4470, 5310, 6150, 6990, 7830],
+            "startToFirstDecisionTicks": 270,
+            "lastDecisionToEndingTicks": 570,
+            "maxDecisionGapTicks": 840,
+            "decisionsPerPhase": {
+              "early": 3,
+              "middle": 4,
+              "late": 3
+            },
+            "intervals": [
+              {
+                "startTick": 0,
+                "endTick": 270,
+                "ticks": 270,
+                "unexplainedOverdueTicks": 0
+              },
+              {
+                "startTick": 270,
+                "endTick": 1110,
+                "ticks": 840,
+                "unexplainedOverdueTicks": 0
+              },
+              {
+                "startTick": 1110,
+                "endTick": 1950,
+                "ticks": 840,
+                "unexplainedOverdueTicks": 0
+              },
+              {
+                "startTick": 1950,
+                "endTick": 2790,
+                "ticks": 840,
+                "unexplainedOverdueTicks": 0
+              },
+              {
+                "startTick": 2790,
+                "endTick": 3630,
+                "ticks": 840,
+                "unexplainedOverdueTicks": 0
+              },
+              {
+                "startTick": 3630,
+                "endTick": 4470,
+                "ticks": 840,
+                "unexplainedOverdueTicks": 0
+              },
+              {
+                "startTick": 4470,
+                "endTick": 5310,
+                "ticks": 840,
+                "unexplainedOverdueTicks": 0
+              },
+              {
+                "startTick": 5310,
+                "endTick": 6150,
+                "ticks": 840,
+                "unexplainedOverdueTicks": 0
+              },
+              {
+                "startTick": 6150,
+                "endTick": 6990,
+                "ticks": 840,
+                "unexplainedOverdueTicks": 0
+              },
+              {
+                "startTick": 6990,
+                "endTick": 7830,
+                "ticks": 840,
+                "unexplainedOverdueTicks": 0
+              },
+              {
+                "startTick": 7830,
+                "endTick": 8400,
+                "ticks": 570,
+                "unexplainedOverdueTicks": 0
+              }
+            ],
+            "ineligiblePeriods": [],
+            "gapCompliance": true
+          },
+          "fullLengthRun": true,
+          "followUpsDroppedDueToCap": 0,
+          "decisionCompliance": true,
+          "gapCompliance": true,
+          "taskReasonCounts": {
+            "stock-water": 14,
+            "stock-food": 16,
+            "stock-materials": 9,
+            "low-energy": 1389,
+            "repair-shelter": 5,
+            "night-sleep": 316,
+            "critical-thirst": 33,
+            "critical-hunger": 30,
+            "critical-health": 920
+          },
+          "priorityUsage": {
+            "balanced": 1,
+            "water": 2,
+            "food": 0,
+            "build": 0,
+            "recover": 0
+          },
+          "frequencies": {
+            "priorities": {
+              "water": 2,
+              "balanced": 1
+            },
+            "rootEvents": {
+              "tide-pools": 1,
+              "forager-instinct": 1,
+              "freshwater-seep": 1,
+              "water-dispute": 1,
+              "smoke-on-horizon": 1,
+              "interior-signal": 1,
+              "leaking-roof": 1,
+              "night-watch": 1,
+              "storm-front": 1
+            },
+            "followUps": {
+              "seep-follow-up": 1
+            },
+            "automaticEffects": {},
+            "choices": {
+              "tide-pools/harvest": 1,
+              "forager-instinct/trust-instinct": 1,
+              "freshwater-seep/mark-source": 1,
+              "seep-follow-up/collect-carefully": 1,
+              "water-dispute/hear-them-out": 1,
+              "smoke-on-horizon/conserve": 1,
+              "interior-signal/turn-back": 1,
+              "leaking-roof/patch": 1,
+              "night-watch/sleep-safe": 1,
+              "storm-front/wait-it-out": 1
+            },
+            "taskReasons": {
+              "stock-water": 14,
+              "stock-food": 16,
+              "stock-materials": 9,
+              "low-energy": 1389,
+              "repair-shelter": 5,
+              "night-sleep": 316,
+              "critical-thirst": 33,
+              "critical-hunger": 30,
+              "critical-health": 920
+            },
+            "damageByEvent": {},
+            "resourceLossByEvent": {
+              "leaking-roof": 2
+            }
+          },
+          "deaths": [],
+          "maxTasklessRunningSteps": 93,
+          "endingQuality": "barely-alive",
+          "minResources": {
+            "water": 0,
+            "food": 0,
+            "materials": 0
+          },
+          "minSources": {
+            "water": 0,
+            "forage": 0,
+            "wreckage": 0,
+            "forest": 1
+          },
+          "initialInvariantFailures": [],
+          "invariantFailures": [],
+          "serializedStateBytes": 14023,
+          "commandTrace": [
+            {
+              "tick": 0,
+              "day": 1,
+              "type": "set-camp-priority",
+              "accepted": true,
+              "priority": "water"
+            },
+            {
+              "tick": 270,
+              "day": 1,
+              "type": "select-event-choice",
+              "accepted": true,
+              "eventId": "tide-pools",
+              "choiceId": "harvest"
+            },
+            {
+              "tick": 270,
+              "day": 1,
+              "type": "acknowledge-event-result",
+              "accepted": true,
+              "eventId": "tide-pools"
+            },
+            {
+              "tick": 600,
+              "day": 2,
+              "type": "set-camp-priority",
+              "accepted": true,
+              "priority": "balanced"
+            },
+            {
+              "tick": 1110,
+              "day": 2,
+              "type": "select-event-choice",
+              "accepted": true,
+              "eventId": "forager-instinct",
+              "choiceId": "trust-instinct"
+            },
+            {
+              "tick": 1110,
+              "day": 2,
+              "type": "acknowledge-event-result",
+              "accepted": true,
+              "eventId": "forager-instinct"
+            },
+            {
+              "tick": 1470,
+              "day": 3,
+              "type": "set-camp-priority",
+              "accepted": true,
+              "priority": "water"
+            },
+            {
+              "tick": 1950,
+              "day": 4,
+              "type": "select-event-choice",
+              "accepted": true,
+              "eventId": "freshwater-seep",
+              "choiceId": "mark-source"
+            },
+            {
+              "tick": 1950,
+              "day": 4,
+              "type": "acknowledge-event-result",
+              "accepted": true,
+              "eventId": "freshwater-seep"
+            },
+            {
+              "tick": 2790,
+              "day": 5,
+              "type": "select-event-choice",
+              "accepted": true,
+              "eventId": "seep-follow-up",
+              "choiceId": "collect-carefully"
+            },
+            {
+              "tick": 2790,
+              "day": 5,
+              "type": "acknowledge-event-result",
+              "accepted": true,
+              "eventId": "seep-follow-up"
+            },
+            {
+              "tick": 3630,
+              "day": 7,
+              "type": "select-event-choice",
+              "accepted": true,
+              "eventId": "water-dispute",
+              "choiceId": "hear-them-out"
+            },
+            {
+              "tick": 3630,
+              "day": 7,
+              "type": "acknowledge-event-result",
+              "accepted": true,
+              "eventId": "water-dispute"
+            },
+            {
+              "tick": 4470,
+              "day": 8,
+              "type": "select-event-choice",
+              "accepted": true,
+              "eventId": "smoke-on-horizon",
+              "choiceId": "conserve"
+            },
+            {
+              "tick": 4470,
+              "day": 8,
+              "type": "acknowledge-event-result",
+              "accepted": true,
+              "eventId": "smoke-on-horizon"
+            },
+            {
+              "tick": 5310,
+              "day": 9,
+              "type": "select-event-choice",
+              "accepted": true,
+              "eventId": "interior-signal",
+              "choiceId": "turn-back"
+            },
+            {
+              "tick": 5310,
+              "day": 9,
+              "type": "acknowledge-event-result",
+              "accepted": true,
+              "eventId": "interior-signal"
+            },
+            {
+              "tick": 6150,
+              "day": 11,
+              "type": "select-event-choice",
+              "accepted": true,
+              "eventId": "leaking-roof",
+              "choiceId": "patch"
+            },
+            {
+              "tick": 6150,
+              "day": 11,
+              "type": "acknowledge-event-result",
+              "accepted": true,
+              "eventId": "leaking-roof"
+            },
+            {
+              "tick": 6990,
+              "day": 12,
+              "type": "select-event-choice",
+              "accepted": true,
+              "eventId": "night-watch",
+              "choiceId": "sleep-safe"
+            },
+            {
+              "tick": 6990,
+              "day": 12,
+              "type": "acknowledge-event-result",
+              "accepted": true,
+              "eventId": "night-watch"
+            },
+            {
+              "tick": 7830,
+              "day": 14,
+              "type": "select-event-choice",
+              "accepted": true,
+              "eventId": "storm-front",
+              "choiceId": "wait-it-out"
+            },
+            {
+              "tick": 7830,
+              "day": 14,
+              "type": "acknowledge-event-result",
+              "accepted": true,
+              "eventId": "storm-front"
+            }
+          ]
+        },
+        {
+          "seed": "review-5",
+          "gameSeed": "review-5",
+          "policy": "m3-conservative",
+          "policyId": "conservative",
+          "version": "m3",
+          "policyVersion": "1.0.0",
+          "policySeed": "1938b32ec12016f238e1bca2d90d93d2cca07b683e7555fcbd0b2990d5b0b32a",
+          "excludedEventId": null,
+          "mode": "production",
+          "status": "victory",
+          "tick": 8400,
+          "day": 14,
+          "survivorCount": 3,
+          "aliveCount": 2,
+          "eventCount": 10,
+          "minDecisionSpacingTicks": 840,
+          "maxDecisionGapTicks": 840,
+          "pacing": {
+            "decisionTicks": [270, 1110, 1950, 2790, 3630, 4470, 5310, 6150, 6990, 7830],
+            "startToFirstDecisionTicks": 270,
+            "lastDecisionToEndingTicks": 570,
+            "maxDecisionGapTicks": 840,
+            "decisionsPerPhase": {
+              "early": 3,
+              "middle": 4,
+              "late": 3
+            },
+            "intervals": [
+              {
+                "startTick": 0,
+                "endTick": 270,
+                "ticks": 270,
+                "unexplainedOverdueTicks": 0
+              },
+              {
+                "startTick": 270,
+                "endTick": 1110,
+                "ticks": 840,
+                "unexplainedOverdueTicks": 0
+              },
+              {
+                "startTick": 1110,
+                "endTick": 1950,
+                "ticks": 840,
+                "unexplainedOverdueTicks": 0
+              },
+              {
+                "startTick": 1950,
+                "endTick": 2790,
+                "ticks": 840,
+                "unexplainedOverdueTicks": 0
+              },
+              {
+                "startTick": 2790,
+                "endTick": 3630,
+                "ticks": 840,
+                "unexplainedOverdueTicks": 0
+              },
+              {
+                "startTick": 3630,
+                "endTick": 4470,
+                "ticks": 840,
+                "unexplainedOverdueTicks": 0
+              },
+              {
+                "startTick": 4470,
+                "endTick": 5310,
+                "ticks": 840,
+                "unexplainedOverdueTicks": 0
+              },
+              {
+                "startTick": 5310,
+                "endTick": 6150,
+                "ticks": 840,
+                "unexplainedOverdueTicks": 0
+              },
+              {
+                "startTick": 6150,
+                "endTick": 6990,
+                "ticks": 840,
+                "unexplainedOverdueTicks": 0
+              },
+              {
+                "startTick": 6990,
+                "endTick": 7830,
+                "ticks": 840,
+                "unexplainedOverdueTicks": 0
+              },
+              {
+                "startTick": 7830,
+                "endTick": 8400,
+                "ticks": 570,
+                "unexplainedOverdueTicks": 0
+              }
+            ],
+            "ineligiblePeriods": [],
+            "gapCompliance": true
+          },
+          "fullLengthRun": true,
+          "followUpsDroppedDueToCap": 0,
+          "decisionCompliance": true,
+          "gapCompliance": true,
+          "taskReasonCounts": {
+            "stock-water": 15,
+            "stock-food": 14,
+            "stock-materials": 9,
+            "low-energy": 1347,
+            "repair-shelter": 6,
+            "night-sleep": 299,
+            "critical-thirst": 34,
+            "critical-hunger": 30,
+            "critical-health": 973
+          },
+          "priorityUsage": {
+            "balanced": 1,
+            "water": 2,
+            "food": 0,
+            "build": 0,
+            "recover": 0
+          },
+          "frequencies": {
+            "priorities": {
+              "water": 2,
+              "balanced": 1
+            },
+            "rootEvents": {
+              "forager-instinct": 1,
+              "interior-signal": 1,
+              "tide-pools": 1,
+              "water-dispute": 1,
+              "freshwater-seep": 1,
+              "smoke-on-horizon": 1,
+              "driftwood-cache": 1,
+              "night-watch": 1,
+              "leaking-roof": 1
+            },
+            "followUps": {
+              "seep-follow-up": 1
+            },
+            "automaticEffects": {},
+            "choices": {
+              "forager-instinct/trust-instinct": 1,
+              "interior-signal/turn-back": 1,
+              "tide-pools/harvest": 1,
+              "water-dispute/hear-them-out": 1,
+              "freshwater-seep/mark-source": 1,
+              "seep-follow-up/collect-carefully": 1,
+              "smoke-on-horizon/conserve": 1,
+              "driftwood-cache/leave-wood": 1,
+              "night-watch/sleep-safe": 1,
+              "leaking-roof/patch": 1
+            },
+            "taskReasons": {
+              "stock-water": 15,
+              "stock-food": 14,
+              "stock-materials": 9,
+              "low-energy": 1347,
+              "repair-shelter": 6,
+              "night-sleep": 299,
+              "critical-thirst": 34,
+              "critical-hunger": 30,
+              "critical-health": 973
+            },
+            "damageByEvent": {},
+            "resourceLossByEvent": {
+              "leaking-roof": 2
+            }
+          },
+          "deaths": [
+            {
+              "survivorId": "survivor-2",
+              "day": 14,
+              "tick": 8257,
+              "causes": ["thirst", "hunger"]
+            }
+          ],
+          "maxTasklessRunningSteps": 93,
+          "endingQuality": "barely-alive",
+          "minResources": {
+            "water": 0,
+            "food": 0,
+            "materials": 0
+          },
+          "minSources": {
+            "water": 0,
+            "forage": 0,
+            "wreckage": 0,
+            "forest": 1
+          },
+          "initialInvariantFailures": [],
+          "invariantFailures": [],
+          "serializedStateBytes": 14078,
+          "commandTrace": [
+            {
+              "tick": 0,
+              "day": 1,
+              "type": "set-camp-priority",
+              "accepted": true,
+              "priority": "water"
+            },
+            {
+              "tick": 270,
+              "day": 1,
+              "type": "select-event-choice",
+              "accepted": true,
+              "eventId": "forager-instinct",
+              "choiceId": "trust-instinct"
+            },
+            {
+              "tick": 270,
+              "day": 1,
+              "type": "acknowledge-event-result",
+              "accepted": true,
+              "eventId": "forager-instinct"
+            },
+            {
+              "tick": 600,
+              "day": 2,
+              "type": "set-camp-priority",
+              "accepted": true,
+              "priority": "balanced"
+            },
+            {
+              "tick": 1110,
+              "day": 2,
+              "type": "select-event-choice",
+              "accepted": true,
+              "eventId": "interior-signal",
+              "choiceId": "turn-back"
+            },
+            {
+              "tick": 1110,
+              "day": 2,
+              "type": "acknowledge-event-result",
+              "accepted": true,
+              "eventId": "interior-signal"
+            },
+            {
+              "tick": 1470,
+              "day": 3,
+              "type": "set-camp-priority",
+              "accepted": true,
+              "priority": "water"
+            },
+            {
+              "tick": 1950,
+              "day": 4,
+              "type": "select-event-choice",
+              "accepted": true,
+              "eventId": "tide-pools",
+              "choiceId": "harvest"
+            },
+            {
+              "tick": 1950,
+              "day": 4,
+              "type": "acknowledge-event-result",
+              "accepted": true,
+              "eventId": "tide-pools"
+            },
+            {
+              "tick": 2790,
+              "day": 5,
+              "type": "select-event-choice",
+              "accepted": true,
+              "eventId": "water-dispute",
+              "choiceId": "hear-them-out"
+            },
+            {
+              "tick": 2790,
+              "day": 5,
+              "type": "acknowledge-event-result",
+              "accepted": true,
+              "eventId": "water-dispute"
+            },
+            {
+              "tick": 3630,
+              "day": 7,
+              "type": "select-event-choice",
+              "accepted": true,
+              "eventId": "freshwater-seep",
+              "choiceId": "mark-source"
+            },
+            {
+              "tick": 3630,
+              "day": 7,
+              "type": "acknowledge-event-result",
+              "accepted": true,
+              "eventId": "freshwater-seep"
+            },
+            {
+              "tick": 4470,
+              "day": 8,
+              "type": "select-event-choice",
+              "accepted": true,
+              "eventId": "seep-follow-up",
+              "choiceId": "collect-carefully"
+            },
+            {
+              "tick": 4470,
+              "day": 8,
+              "type": "acknowledge-event-result",
+              "accepted": true,
+              "eventId": "seep-follow-up"
+            },
+            {
+              "tick": 5310,
+              "day": 9,
+              "type": "select-event-choice",
+              "accepted": true,
+              "eventId": "smoke-on-horizon",
+              "choiceId": "conserve"
+            },
+            {
+              "tick": 5310,
+              "day": 9,
+              "type": "acknowledge-event-result",
+              "accepted": true,
+              "eventId": "smoke-on-horizon"
+            },
+            {
+              "tick": 6150,
+              "day": 11,
+              "type": "select-event-choice",
+              "accepted": true,
+              "eventId": "driftwood-cache",
+              "choiceId": "leave-wood"
+            },
+            {
+              "tick": 6150,
+              "day": 11,
+              "type": "acknowledge-event-result",
+              "accepted": true,
+              "eventId": "driftwood-cache"
+            },
+            {
+              "tick": 6990,
+              "day": 12,
+              "type": "select-event-choice",
+              "accepted": true,
+              "eventId": "night-watch",
+              "choiceId": "sleep-safe"
+            },
+            {
+              "tick": 6990,
+              "day": 12,
+              "type": "acknowledge-event-result",
+              "accepted": true,
+              "eventId": "night-watch"
+            },
+            {
+              "tick": 7830,
+              "day": 14,
+              "type": "select-event-choice",
+              "accepted": true,
+              "eventId": "leaking-roof",
+              "choiceId": "patch"
+            },
+            {
+              "tick": 7830,
+              "day": 14,
+              "type": "acknowledge-event-result",
+              "accepted": true,
+              "eventId": "leaking-roof"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "results": [
+    {
+      "seed": "review-1",
+      "gameSeed": "review-1",
+      "policy": "m3-conservative",
+      "policyId": "conservative",
+      "version": "m3",
+      "policyVersion": "1.0.0",
+      "policySeed": "a51f563047ff61344875097d6d7380f516abec19c394f5518cd301149c7cd93d",
+      "excludedEventId": null,
+      "mode": "production",
+      "status": "victory",
+      "tick": 8400,
+      "day": 14,
+      "survivorCount": 3,
+      "aliveCount": 2,
+      "eventCount": 10,
+      "minDecisionSpacingTicks": 840,
+      "maxDecisionGapTicks": 840,
+      "pacing": {
+        "decisionTicks": [270, 1110, 1950, 2790, 3630, 4470, 5310, 6150, 6990, 7830],
+        "startToFirstDecisionTicks": 270,
+        "lastDecisionToEndingTicks": 570,
+        "maxDecisionGapTicks": 840,
+        "decisionsPerPhase": {
+          "early": 3,
+          "middle": 4,
+          "late": 3
+        },
+        "intervals": [
+          {
+            "startTick": 0,
+            "endTick": 270,
+            "ticks": 270,
+            "unexplainedOverdueTicks": 0
+          },
+          {
+            "startTick": 270,
+            "endTick": 1110,
+            "ticks": 840,
+            "unexplainedOverdueTicks": 0
+          },
+          {
+            "startTick": 1110,
+            "endTick": 1950,
+            "ticks": 840,
+            "unexplainedOverdueTicks": 0
+          },
+          {
+            "startTick": 1950,
+            "endTick": 2790,
+            "ticks": 840,
+            "unexplainedOverdueTicks": 0
+          },
+          {
+            "startTick": 2790,
+            "endTick": 3630,
+            "ticks": 840,
+            "unexplainedOverdueTicks": 0
+          },
+          {
+            "startTick": 3630,
+            "endTick": 4470,
+            "ticks": 840,
+            "unexplainedOverdueTicks": 0
+          },
+          {
+            "startTick": 4470,
+            "endTick": 5310,
+            "ticks": 840,
+            "unexplainedOverdueTicks": 0
+          },
+          {
+            "startTick": 5310,
+            "endTick": 6150,
+            "ticks": 840,
+            "unexplainedOverdueTicks": 0
+          },
+          {
+            "startTick": 6150,
+            "endTick": 6990,
+            "ticks": 840,
+            "unexplainedOverdueTicks": 0
+          },
+          {
+            "startTick": 6990,
+            "endTick": 7830,
+            "ticks": 840,
+            "unexplainedOverdueTicks": 0
+          },
+          {
+            "startTick": 7830,
+            "endTick": 8400,
+            "ticks": 570,
+            "unexplainedOverdueTicks": 0
+          }
+        ],
+        "ineligiblePeriods": [],
+        "gapCompliance": true
+      },
+      "fullLengthRun": true,
+      "followUpsDroppedDueToCap": 0,
+      "decisionCompliance": true,
+      "gapCompliance": true,
+      "taskReasonCounts": {
+        "stock-water": 13,
+        "stock-food": 13,
+        "stock-materials": 8,
+        "low-energy": 1383,
+        "repair-shelter": 4,
+        "night-sleep": 300,
+        "critical-thirst": 33,
+        "critical-hunger": 30,
+        "critical-health": 960
+      },
+      "priorityUsage": {
+        "balanced": 1,
+        "water": 2,
+        "food": 0,
+        "build": 0,
+        "recover": 0
+      },
+      "frequencies": {
+        "priorities": {
+          "water": 2,
+          "balanced": 1
+        },
+        "rootEvents": {
+          "night-watch": 1,
+          "interior-signal": 1,
+          "forager-instinct": 1,
+          "freshwater-seep": 1,
+          "leaking-roof": 1,
+          "driftwood-cache": 1,
+          "storm-front": 1,
+          "smoke-on-horizon": 1,
+          "fallen-palm": 1
+        },
+        "followUps": {
+          "seep-follow-up": 1
+        },
+        "automaticEffects": {},
+        "choices": {
+          "night-watch/sleep-safe": 1,
+          "interior-signal/turn-back": 1,
+          "forager-instinct/trust-instinct": 1,
+          "freshwater-seep/mark-source": 1,
+          "seep-follow-up/collect-carefully": 1,
+          "leaking-roof/patch": 1,
+          "driftwood-cache/leave-wood": 1,
+          "storm-front/wait-it-out": 1,
+          "smoke-on-horizon/conserve": 1,
+          "fallen-palm/move-on": 1
+        },
+        "taskReasons": {
+          "stock-water": 13,
+          "stock-food": 13,
+          "stock-materials": 8,
+          "low-energy": 1383,
+          "repair-shelter": 4,
+          "night-sleep": 300,
+          "critical-thirst": 33,
+          "critical-hunger": 30,
+          "critical-health": 960
+        },
+        "damageByEvent": {},
+        "resourceLossByEvent": {
+          "leaking-roof": 2
+        }
+      },
+      "deaths": [
+        {
+          "survivorId": "survivor-1",
+          "day": 14,
+          "tick": 8381,
+          "causes": ["thirst", "hunger"]
+        }
+      ],
+      "maxTasklessRunningSteps": 70,
+      "endingQuality": "barely-alive",
+      "minResources": {
+        "water": 0,
+        "food": 0,
+        "materials": 0
+      },
+      "minSources": {
+        "water": 0,
+        "forage": 0,
+        "wreckage": 0,
+        "forest": 3
+      },
+      "initialInvariantFailures": [],
+      "invariantFailures": [],
+      "serializedStateBytes": 13989,
+      "commandTrace": [
+        {
+          "tick": 0,
+          "day": 1,
+          "type": "set-camp-priority",
+          "accepted": true,
+          "priority": "water"
+        },
+        {
+          "tick": 270,
+          "day": 1,
+          "type": "select-event-choice",
+          "accepted": true,
+          "eventId": "night-watch",
+          "choiceId": "sleep-safe"
+        },
+        {
+          "tick": 270,
+          "day": 1,
+          "type": "acknowledge-event-result",
+          "accepted": true,
+          "eventId": "night-watch"
+        },
+        {
+          "tick": 600,
+          "day": 2,
+          "type": "set-camp-priority",
+          "accepted": true,
+          "priority": "balanced"
+        },
+        {
+          "tick": 1110,
+          "day": 2,
+          "type": "select-event-choice",
+          "accepted": true,
+          "eventId": "interior-signal",
+          "choiceId": "turn-back"
+        },
+        {
+          "tick": 1110,
+          "day": 2,
+          "type": "acknowledge-event-result",
+          "accepted": true,
+          "eventId": "interior-signal"
+        },
+        {
+          "tick": 1470,
+          "day": 3,
+          "type": "set-camp-priority",
+          "accepted": true,
+          "priority": "water"
+        },
+        {
+          "tick": 1950,
+          "day": 4,
+          "type": "select-event-choice",
+          "accepted": true,
+          "eventId": "forager-instinct",
+          "choiceId": "trust-instinct"
+        },
+        {
+          "tick": 1950,
+          "day": 4,
+          "type": "acknowledge-event-result",
+          "accepted": true,
+          "eventId": "forager-instinct"
+        },
+        {
+          "tick": 2790,
+          "day": 5,
+          "type": "select-event-choice",
+          "accepted": true,
+          "eventId": "freshwater-seep",
+          "choiceId": "mark-source"
+        },
+        {
+          "tick": 2790,
+          "day": 5,
+          "type": "acknowledge-event-result",
+          "accepted": true,
+          "eventId": "freshwater-seep"
+        },
+        {
+          "tick": 3630,
+          "day": 7,
+          "type": "select-event-choice",
+          "accepted": true,
+          "eventId": "seep-follow-up",
+          "choiceId": "collect-carefully"
+        },
+        {
+          "tick": 3630,
+          "day": 7,
+          "type": "acknowledge-event-result",
+          "accepted": true,
+          "eventId": "seep-follow-up"
+        },
+        {
+          "tick": 4470,
+          "day": 8,
+          "type": "select-event-choice",
+          "accepted": true,
+          "eventId": "leaking-roof",
+          "choiceId": "patch"
+        },
+        {
+          "tick": 4470,
+          "day": 8,
+          "type": "acknowledge-event-result",
+          "accepted": true,
+          "eventId": "leaking-roof"
+        },
+        {
+          "tick": 5310,
+          "day": 9,
+          "type": "select-event-choice",
+          "accepted": true,
+          "eventId": "driftwood-cache",
+          "choiceId": "leave-wood"
+        },
+        {
+          "tick": 5310,
+          "day": 9,
+          "type": "acknowledge-event-result",
+          "accepted": true,
+          "eventId": "driftwood-cache"
+        },
+        {
+          "tick": 6150,
+          "day": 11,
+          "type": "select-event-choice",
+          "accepted": true,
+          "eventId": "storm-front",
+          "choiceId": "wait-it-out"
+        },
+        {
+          "tick": 6150,
+          "day": 11,
+          "type": "acknowledge-event-result",
+          "accepted": true,
+          "eventId": "storm-front"
+        },
+        {
+          "tick": 6990,
+          "day": 12,
+          "type": "select-event-choice",
+          "accepted": true,
+          "eventId": "smoke-on-horizon",
+          "choiceId": "conserve"
+        },
+        {
+          "tick": 6990,
+          "day": 12,
+          "type": "acknowledge-event-result",
+          "accepted": true,
+          "eventId": "smoke-on-horizon"
+        },
+        {
+          "tick": 7830,
+          "day": 14,
+          "type": "select-event-choice",
+          "accepted": true,
+          "eventId": "fallen-palm",
+          "choiceId": "move-on"
+        },
+        {
+          "tick": 7830,
+          "day": 14,
+          "type": "acknowledge-event-result",
+          "accepted": true,
+          "eventId": "fallen-palm"
+        }
+      ]
+    },
+    {
+      "seed": "review-2",
+      "gameSeed": "review-2",
+      "policy": "m3-conservative",
+      "policyId": "conservative",
+      "version": "m3",
+      "policyVersion": "1.0.0",
+      "policySeed": "4d1e66689370279ec7496b879b2c591ffad16db92dcf7038d0eed98d29f2e55b",
+      "excludedEventId": null,
+      "mode": "production",
+      "status": "victory",
+      "tick": 8400,
+      "day": 14,
+      "survivorCount": 3,
+      "aliveCount": 3,
+      "eventCount": 10,
+      "minDecisionSpacingTicks": 840,
+      "maxDecisionGapTicks": 840,
+      "pacing": {
+        "decisionTicks": [270, 1110, 1950, 2790, 3630, 4470, 5310, 6150, 6990, 7830],
+        "startToFirstDecisionTicks": 270,
+        "lastDecisionToEndingTicks": 570,
+        "maxDecisionGapTicks": 840,
+        "decisionsPerPhase": {
+          "early": 3,
+          "middle": 4,
+          "late": 3
+        },
+        "intervals": [
+          {
+            "startTick": 0,
+            "endTick": 270,
+            "ticks": 270,
+            "unexplainedOverdueTicks": 0
+          },
+          {
+            "startTick": 270,
+            "endTick": 1110,
+            "ticks": 840,
+            "unexplainedOverdueTicks": 0
+          },
+          {
+            "startTick": 1110,
+            "endTick": 1950,
+            "ticks": 840,
+            "unexplainedOverdueTicks": 0
+          },
+          {
+            "startTick": 1950,
+            "endTick": 2790,
+            "ticks": 840,
+            "unexplainedOverdueTicks": 0
+          },
+          {
+            "startTick": 2790,
+            "endTick": 3630,
+            "ticks": 840,
+            "unexplainedOverdueTicks": 0
+          },
+          {
+            "startTick": 3630,
+            "endTick": 4470,
+            "ticks": 840,
+            "unexplainedOverdueTicks": 0
+          },
+          {
+            "startTick": 4470,
+            "endTick": 5310,
+            "ticks": 840,
+            "unexplainedOverdueTicks": 0
+          },
+          {
+            "startTick": 5310,
+            "endTick": 6150,
+            "ticks": 840,
+            "unexplainedOverdueTicks": 0
+          },
+          {
+            "startTick": 6150,
+            "endTick": 6990,
+            "ticks": 840,
+            "unexplainedOverdueTicks": 0
+          },
+          {
+            "startTick": 6990,
+            "endTick": 7830,
+            "ticks": 840,
+            "unexplainedOverdueTicks": 0
+          },
+          {
+            "startTick": 7830,
+            "endTick": 8400,
+            "ticks": 570,
+            "unexplainedOverdueTicks": 0
+          }
+        ],
+        "ineligiblePeriods": [],
+        "gapCompliance": true
+      },
+      "fullLengthRun": true,
+      "followUpsDroppedDueToCap": 0,
+      "decisionCompliance": true,
+      "gapCompliance": true,
+      "taskReasonCounts": {
+        "stock-water": 16,
+        "stock-food": 16,
+        "stock-materials": 8,
+        "low-energy": 1536,
+        "repair-shelter": 4,
+        "night-sleep": 338,
+        "critical-thirst": 41,
+        "critical-hunger": 33,
+        "critical-health": 731
+      },
+      "priorityUsage": {
+        "balanced": 1,
+        "water": 2,
+        "food": 0,
+        "build": 0,
+        "recover": 0
+      },
+      "frequencies": {
+        "priorities": {
+          "water": 2,
+          "balanced": 1
+        },
+        "rootEvents": {
+          "interior-signal": 1,
+          "forager-instinct": 1,
+          "tide-pools": 1,
+          "night-watch": 1,
+          "driftwood-cache": 1,
+          "leaking-roof": 1,
+          "freshwater-seep": 1,
+          "smoke-on-horizon": 1,
+          "fallen-palm": 1
+        },
+        "followUps": {
+          "seep-follow-up": 1
+        },
+        "automaticEffects": {},
+        "choices": {
+          "interior-signal/turn-back": 1,
+          "forager-instinct/trust-instinct": 1,
+          "tide-pools/harvest": 1,
+          "night-watch/sleep-safe": 1,
+          "driftwood-cache/leave-wood": 1,
+          "leaking-roof/patch": 1,
+          "freshwater-seep/mark-source": 1,
+          "seep-follow-up/collect-carefully": 1,
+          "smoke-on-horizon/conserve": 1,
+          "fallen-palm/move-on": 1
+        },
+        "taskReasons": {
+          "stock-water": 16,
+          "stock-food": 16,
+          "stock-materials": 8,
+          "low-energy": 1536,
+          "repair-shelter": 4,
+          "night-sleep": 338,
+          "critical-thirst": 41,
+          "critical-hunger": 33,
+          "critical-health": 731
+        },
+        "damageByEvent": {},
+        "resourceLossByEvent": {
+          "leaking-roof": 2
+        }
+      },
+      "deaths": [],
+      "maxTasklessRunningSteps": 93,
+      "endingQuality": "barely-alive",
+      "minResources": {
+        "water": 0,
+        "food": 0,
+        "materials": 0
+      },
+      "minSources": {
+        "water": 0,
+        "forage": 0,
+        "wreckage": 0,
+        "forest": 3
+      },
+      "initialInvariantFailures": [],
+      "invariantFailures": [],
+      "serializedStateBytes": 14120,
+      "commandTrace": [
+        {
+          "tick": 0,
+          "day": 1,
+          "type": "set-camp-priority",
+          "accepted": true,
+          "priority": "water"
+        },
+        {
+          "tick": 270,
+          "day": 1,
+          "type": "select-event-choice",
+          "accepted": true,
+          "eventId": "interior-signal",
+          "choiceId": "turn-back"
+        },
+        {
+          "tick": 270,
+          "day": 1,
+          "type": "acknowledge-event-result",
+          "accepted": true,
+          "eventId": "interior-signal"
+        },
+        {
+          "tick": 600,
+          "day": 2,
+          "type": "set-camp-priority",
+          "accepted": true,
+          "priority": "balanced"
+        },
+        {
+          "tick": 1110,
+          "day": 2,
+          "type": "select-event-choice",
+          "accepted": true,
+          "eventId": "forager-instinct",
+          "choiceId": "trust-instinct"
+        },
+        {
+          "tick": 1110,
+          "day": 2,
+          "type": "acknowledge-event-result",
+          "accepted": true,
+          "eventId": "forager-instinct"
+        },
+        {
+          "tick": 1470,
+          "day": 3,
+          "type": "set-camp-priority",
+          "accepted": true,
+          "priority": "water"
+        },
+        {
+          "tick": 1950,
+          "day": 4,
+          "type": "select-event-choice",
+          "accepted": true,
+          "eventId": "tide-pools",
+          "choiceId": "harvest"
+        },
+        {
+          "tick": 1950,
+          "day": 4,
+          "type": "acknowledge-event-result",
+          "accepted": true,
+          "eventId": "tide-pools"
+        },
+        {
+          "tick": 2790,
+          "day": 5,
+          "type": "select-event-choice",
+          "accepted": true,
+          "eventId": "night-watch",
+          "choiceId": "sleep-safe"
+        },
+        {
+          "tick": 2790,
+          "day": 5,
+          "type": "acknowledge-event-result",
+          "accepted": true,
+          "eventId": "night-watch"
+        },
+        {
+          "tick": 3630,
+          "day": 7,
+          "type": "select-event-choice",
+          "accepted": true,
+          "eventId": "driftwood-cache",
+          "choiceId": "leave-wood"
+        },
+        {
+          "tick": 3630,
+          "day": 7,
+          "type": "acknowledge-event-result",
+          "accepted": true,
+          "eventId": "driftwood-cache"
+        },
+        {
+          "tick": 4470,
+          "day": 8,
+          "type": "select-event-choice",
+          "accepted": true,
+          "eventId": "leaking-roof",
+          "choiceId": "patch"
+        },
+        {
+          "tick": 4470,
+          "day": 8,
+          "type": "acknowledge-event-result",
+          "accepted": true,
+          "eventId": "leaking-roof"
+        },
+        {
+          "tick": 5310,
+          "day": 9,
+          "type": "select-event-choice",
+          "accepted": true,
+          "eventId": "freshwater-seep",
+          "choiceId": "mark-source"
+        },
+        {
+          "tick": 5310,
+          "day": 9,
+          "type": "acknowledge-event-result",
+          "accepted": true,
+          "eventId": "freshwater-seep"
+        },
+        {
+          "tick": 6150,
+          "day": 11,
+          "type": "select-event-choice",
+          "accepted": true,
+          "eventId": "seep-follow-up",
+          "choiceId": "collect-carefully"
+        },
+        {
+          "tick": 6150,
+          "day": 11,
+          "type": "acknowledge-event-result",
+          "accepted": true,
+          "eventId": "seep-follow-up"
+        },
+        {
+          "tick": 6990,
+          "day": 12,
+          "type": "select-event-choice",
+          "accepted": true,
+          "eventId": "smoke-on-horizon",
+          "choiceId": "conserve"
+        },
+        {
+          "tick": 6990,
+          "day": 12,
+          "type": "acknowledge-event-result",
+          "accepted": true,
+          "eventId": "smoke-on-horizon"
+        },
+        {
+          "tick": 7830,
+          "day": 14,
+          "type": "select-event-choice",
+          "accepted": true,
+          "eventId": "fallen-palm",
+          "choiceId": "move-on"
+        },
+        {
+          "tick": 7830,
+          "day": 14,
+          "type": "acknowledge-event-result",
+          "accepted": true,
+          "eventId": "fallen-palm"
+        }
+      ]
+    },
+    {
+      "seed": "review-3",
+      "gameSeed": "review-3",
+      "policy": "m3-conservative",
+      "policyId": "conservative",
+      "version": "m3",
+      "policyVersion": "1.0.0",
+      "policySeed": "661389b8755eb1fc6809c307bc0ddc317bc494264c6c55d79b3a906415bbbbb8",
+      "excludedEventId": null,
+      "mode": "production",
+      "status": "victory",
+      "tick": 8400,
+      "day": 14,
+      "survivorCount": 3,
+      "aliveCount": 3,
+      "eventCount": 10,
+      "minDecisionSpacingTicks": 840,
+      "maxDecisionGapTicks": 1200,
+      "pacing": {
+        "decisionTicks": [270, 1110, 1950, 2790, 3630, 4470, 5310, 6150, 6990, 8190],
+        "startToFirstDecisionTicks": 270,
+        "lastDecisionToEndingTicks": 210,
+        "maxDecisionGapTicks": 1200,
+        "decisionsPerPhase": {
+          "early": 3,
+          "middle": 4,
+          "late": 3
+        },
+        "intervals": [
+          {
+            "startTick": 0,
+            "endTick": 270,
+            "ticks": 270,
+            "unexplainedOverdueTicks": 0
+          },
+          {
+            "startTick": 270,
+            "endTick": 1110,
+            "ticks": 840,
+            "unexplainedOverdueTicks": 0
+          },
+          {
+            "startTick": 1110,
+            "endTick": 1950,
+            "ticks": 840,
+            "unexplainedOverdueTicks": 0
+          },
+          {
+            "startTick": 1950,
+            "endTick": 2790,
+            "ticks": 840,
+            "unexplainedOverdueTicks": 0
+          },
+          {
+            "startTick": 2790,
+            "endTick": 3630,
+            "ticks": 840,
+            "unexplainedOverdueTicks": 0
+          },
+          {
+            "startTick": 3630,
+            "endTick": 4470,
+            "ticks": 840,
+            "unexplainedOverdueTicks": 0
+          },
+          {
+            "startTick": 4470,
+            "endTick": 5310,
+            "ticks": 840,
+            "unexplainedOverdueTicks": 0
+          },
+          {
+            "startTick": 5310,
+            "endTick": 6150,
+            "ticks": 840,
+            "unexplainedOverdueTicks": 0
+          },
+          {
+            "startTick": 6150,
+            "endTick": 6990,
+            "ticks": 840,
+            "unexplainedOverdueTicks": 0
+          },
+          {
+            "startTick": 6990,
+            "endTick": 8190,
+            "ticks": 1200,
+            "unexplainedOverdueTicks": 0
+          },
+          {
+            "startTick": 8190,
+            "endTick": 8400,
+            "ticks": 210,
+            "unexplainedOverdueTicks": 0
+          }
+        ],
+        "ineligiblePeriods": [],
+        "gapCompliance": true
+      },
+      "fullLengthRun": true,
+      "followUpsDroppedDueToCap": 0,
+      "decisionCompliance": true,
+      "gapCompliance": true,
+      "taskReasonCounts": {
+        "stock-water": 16,
+        "stock-food": 17,
+        "stock-materials": 9,
+        "low-energy": 1471,
+        "repair-shelter": 4,
+        "night-sleep": 318,
+        "critical-thirst": 36,
+        "critical-hunger": 36,
+        "critical-health": 817
+      },
+      "priorityUsage": {
+        "balanced": 1,
+        "water": 2,
+        "food": 0,
+        "build": 0,
+        "recover": 0
+      },
+      "frequencies": {
+        "priorities": {
+          "water": 2,
+          "balanced": 1
+        },
+        "rootEvents": {
+          "interior-signal": 1,
+          "tide-pools": 1,
+          "freshwater-seep": 1,
+          "night-watch": 1,
+          "leaking-roof": 1,
+          "storm-front": 1,
+          "fallen-palm": 1,
+          "driftwood-cache": 1,
+          "forager-instinct": 1
+        },
+        "followUps": {
+          "seep-follow-up": 1
+        },
+        "automaticEffects": {},
+        "choices": {
+          "interior-signal/turn-back": 1,
+          "tide-pools/harvest": 1,
+          "freshwater-seep/mark-source": 1,
+          "seep-follow-up/collect-carefully": 1,
+          "night-watch/sleep-safe": 1,
+          "leaking-roof/patch": 1,
+          "storm-front/wait-it-out": 1,
+          "fallen-palm/move-on": 1,
+          "driftwood-cache/leave-wood": 1,
+          "forager-instinct/trust-instinct": 1
+        },
+        "taskReasons": {
+          "stock-water": 16,
+          "stock-food": 17,
+          "stock-materials": 9,
+          "low-energy": 1471,
+          "repair-shelter": 4,
+          "night-sleep": 318,
+          "critical-thirst": 36,
+          "critical-hunger": 36,
+          "critical-health": 817
+        },
+        "damageByEvent": {},
+        "resourceLossByEvent": {
+          "leaking-roof": 2
+        }
+      },
+      "deaths": [],
+      "maxTasklessRunningSteps": 93,
+      "endingQuality": "barely-alive",
+      "minResources": {
+        "water": 0,
+        "food": 0,
+        "materials": 0
+      },
+      "minSources": {
+        "water": 0,
+        "forage": 0,
+        "wreckage": 0,
+        "forest": 1
+      },
+      "initialInvariantFailures": [],
+      "invariantFailures": [],
+      "serializedStateBytes": 13350,
+      "commandTrace": [
+        {
+          "tick": 0,
+          "day": 1,
+          "type": "set-camp-priority",
+          "accepted": true,
+          "priority": "water"
+        },
+        {
+          "tick": 270,
+          "day": 1,
+          "type": "select-event-choice",
+          "accepted": true,
+          "eventId": "interior-signal",
+          "choiceId": "turn-back"
+        },
+        {
+          "tick": 270,
+          "day": 1,
+          "type": "acknowledge-event-result",
+          "accepted": true,
+          "eventId": "interior-signal"
+        },
+        {
+          "tick": 600,
+          "day": 2,
+          "type": "set-camp-priority",
+          "accepted": true,
+          "priority": "balanced"
+        },
+        {
+          "tick": 1110,
+          "day": 2,
+          "type": "select-event-choice",
+          "accepted": true,
+          "eventId": "tide-pools",
+          "choiceId": "harvest"
+        },
+        {
+          "tick": 1110,
+          "day": 2,
+          "type": "acknowledge-event-result",
+          "accepted": true,
+          "eventId": "tide-pools"
+        },
+        {
+          "tick": 1470,
+          "day": 3,
+          "type": "set-camp-priority",
+          "accepted": true,
+          "priority": "water"
+        },
+        {
+          "tick": 1950,
+          "day": 4,
+          "type": "select-event-choice",
+          "accepted": true,
+          "eventId": "freshwater-seep",
+          "choiceId": "mark-source"
+        },
+        {
+          "tick": 1950,
+          "day": 4,
+          "type": "acknowledge-event-result",
+          "accepted": true,
+          "eventId": "freshwater-seep"
+        },
+        {
+          "tick": 2790,
+          "day": 5,
+          "type": "select-event-choice",
+          "accepted": true,
+          "eventId": "seep-follow-up",
+          "choiceId": "collect-carefully"
+        },
+        {
+          "tick": 2790,
+          "day": 5,
+          "type": "acknowledge-event-result",
+          "accepted": true,
+          "eventId": "seep-follow-up"
+        },
+        {
+          "tick": 3630,
+          "day": 7,
+          "type": "select-event-choice",
+          "accepted": true,
+          "eventId": "night-watch",
+          "choiceId": "sleep-safe"
+        },
+        {
+          "tick": 3630,
+          "day": 7,
+          "type": "acknowledge-event-result",
+          "accepted": true,
+          "eventId": "night-watch"
+        },
+        {
+          "tick": 4470,
+          "day": 8,
+          "type": "select-event-choice",
+          "accepted": true,
+          "eventId": "leaking-roof",
+          "choiceId": "patch"
+        },
+        {
+          "tick": 4470,
+          "day": 8,
+          "type": "acknowledge-event-result",
+          "accepted": true,
+          "eventId": "leaking-roof"
+        },
+        {
+          "tick": 5310,
+          "day": 9,
+          "type": "select-event-choice",
+          "accepted": true,
+          "eventId": "storm-front",
+          "choiceId": "wait-it-out"
+        },
+        {
+          "tick": 5310,
+          "day": 9,
+          "type": "acknowledge-event-result",
+          "accepted": true,
+          "eventId": "storm-front"
+        },
+        {
+          "tick": 6150,
+          "day": 11,
+          "type": "select-event-choice",
+          "accepted": true,
+          "eventId": "fallen-palm",
+          "choiceId": "move-on"
+        },
+        {
+          "tick": 6150,
+          "day": 11,
+          "type": "acknowledge-event-result",
+          "accepted": true,
+          "eventId": "fallen-palm"
+        },
+        {
+          "tick": 6990,
+          "day": 12,
+          "type": "select-event-choice",
+          "accepted": true,
+          "eventId": "driftwood-cache",
+          "choiceId": "leave-wood"
+        },
+        {
+          "tick": 6990,
+          "day": 12,
+          "type": "acknowledge-event-result",
+          "accepted": true,
+          "eventId": "driftwood-cache"
+        },
+        {
+          "tick": 8190,
+          "day": 14,
+          "type": "select-event-choice",
+          "accepted": true,
+          "eventId": "forager-instinct",
+          "choiceId": "trust-instinct"
+        },
+        {
+          "tick": 8190,
+          "day": 14,
+          "type": "acknowledge-event-result",
+          "accepted": true,
+          "eventId": "forager-instinct"
+        }
+      ]
+    },
+    {
+      "seed": "review-4",
+      "gameSeed": "review-4",
+      "policy": "m3-conservative",
+      "policyId": "conservative",
+      "version": "m3",
+      "policyVersion": "1.0.0",
+      "policySeed": "2979ba670253d60bbab0f2aecfcd3e142ea6cb3e50a8a32078d59ace5b01298e",
+      "excludedEventId": null,
+      "mode": "production",
+      "status": "victory",
+      "tick": 8400,
+      "day": 14,
+      "survivorCount": 3,
+      "aliveCount": 3,
+      "eventCount": 10,
+      "minDecisionSpacingTicks": 840,
+      "maxDecisionGapTicks": 840,
+      "pacing": {
+        "decisionTicks": [270, 1110, 1950, 2790, 3630, 4470, 5310, 6150, 6990, 7830],
+        "startToFirstDecisionTicks": 270,
+        "lastDecisionToEndingTicks": 570,
+        "maxDecisionGapTicks": 840,
+        "decisionsPerPhase": {
+          "early": 3,
+          "middle": 4,
+          "late": 3
+        },
+        "intervals": [
+          {
+            "startTick": 0,
+            "endTick": 270,
+            "ticks": 270,
+            "unexplainedOverdueTicks": 0
+          },
+          {
+            "startTick": 270,
+            "endTick": 1110,
+            "ticks": 840,
+            "unexplainedOverdueTicks": 0
+          },
+          {
+            "startTick": 1110,
+            "endTick": 1950,
+            "ticks": 840,
+            "unexplainedOverdueTicks": 0
+          },
+          {
+            "startTick": 1950,
+            "endTick": 2790,
+            "ticks": 840,
+            "unexplainedOverdueTicks": 0
+          },
+          {
+            "startTick": 2790,
+            "endTick": 3630,
+            "ticks": 840,
+            "unexplainedOverdueTicks": 0
+          },
+          {
+            "startTick": 3630,
+            "endTick": 4470,
+            "ticks": 840,
+            "unexplainedOverdueTicks": 0
+          },
+          {
+            "startTick": 4470,
+            "endTick": 5310,
+            "ticks": 840,
+            "unexplainedOverdueTicks": 0
+          },
+          {
+            "startTick": 5310,
+            "endTick": 6150,
+            "ticks": 840,
+            "unexplainedOverdueTicks": 0
+          },
+          {
+            "startTick": 6150,
+            "endTick": 6990,
+            "ticks": 840,
+            "unexplainedOverdueTicks": 0
+          },
+          {
+            "startTick": 6990,
+            "endTick": 7830,
+            "ticks": 840,
+            "unexplainedOverdueTicks": 0
+          },
+          {
+            "startTick": 7830,
+            "endTick": 8400,
+            "ticks": 570,
+            "unexplainedOverdueTicks": 0
+          }
+        ],
+        "ineligiblePeriods": [],
+        "gapCompliance": true
+      },
+      "fullLengthRun": true,
+      "followUpsDroppedDueToCap": 0,
+      "decisionCompliance": true,
+      "gapCompliance": true,
+      "taskReasonCounts": {
+        "stock-water": 14,
+        "stock-food": 16,
+        "stock-materials": 9,
+        "low-energy": 1389,
+        "repair-shelter": 5,
+        "night-sleep": 316,
+        "critical-thirst": 33,
+        "critical-hunger": 30,
+        "critical-health": 920
+      },
+      "priorityUsage": {
+        "balanced": 1,
+        "water": 2,
+        "food": 0,
+        "build": 0,
+        "recover": 0
+      },
+      "frequencies": {
+        "priorities": {
+          "water": 2,
+          "balanced": 1
+        },
+        "rootEvents": {
+          "tide-pools": 1,
+          "forager-instinct": 1,
+          "freshwater-seep": 1,
+          "water-dispute": 1,
+          "smoke-on-horizon": 1,
+          "interior-signal": 1,
+          "leaking-roof": 1,
+          "night-watch": 1,
+          "storm-front": 1
+        },
+        "followUps": {
+          "seep-follow-up": 1
+        },
+        "automaticEffects": {},
+        "choices": {
+          "tide-pools/harvest": 1,
+          "forager-instinct/trust-instinct": 1,
+          "freshwater-seep/mark-source": 1,
+          "seep-follow-up/collect-carefully": 1,
+          "water-dispute/hear-them-out": 1,
+          "smoke-on-horizon/conserve": 1,
+          "interior-signal/turn-back": 1,
+          "leaking-roof/patch": 1,
+          "night-watch/sleep-safe": 1,
+          "storm-front/wait-it-out": 1
+        },
+        "taskReasons": {
+          "stock-water": 14,
+          "stock-food": 16,
+          "stock-materials": 9,
+          "low-energy": 1389,
+          "repair-shelter": 5,
+          "night-sleep": 316,
+          "critical-thirst": 33,
+          "critical-hunger": 30,
+          "critical-health": 920
+        },
+        "damageByEvent": {},
+        "resourceLossByEvent": {
+          "leaking-roof": 2
+        }
+      },
+      "deaths": [],
+      "maxTasklessRunningSteps": 93,
+      "endingQuality": "barely-alive",
+      "minResources": {
+        "water": 0,
+        "food": 0,
+        "materials": 0
+      },
+      "minSources": {
+        "water": 0,
+        "forage": 0,
+        "wreckage": 0,
+        "forest": 1
+      },
+      "initialInvariantFailures": [],
+      "invariantFailures": [],
+      "serializedStateBytes": 14023,
+      "commandTrace": [
+        {
+          "tick": 0,
+          "day": 1,
+          "type": "set-camp-priority",
+          "accepted": true,
+          "priority": "water"
+        },
+        {
+          "tick": 270,
+          "day": 1,
+          "type": "select-event-choice",
+          "accepted": true,
+          "eventId": "tide-pools",
+          "choiceId": "harvest"
+        },
+        {
+          "tick": 270,
+          "day": 1,
+          "type": "acknowledge-event-result",
+          "accepted": true,
+          "eventId": "tide-pools"
+        },
+        {
+          "tick": 600,
+          "day": 2,
+          "type": "set-camp-priority",
+          "accepted": true,
+          "priority": "balanced"
+        },
+        {
+          "tick": 1110,
+          "day": 2,
+          "type": "select-event-choice",
+          "accepted": true,
+          "eventId": "forager-instinct",
+          "choiceId": "trust-instinct"
+        },
+        {
+          "tick": 1110,
+          "day": 2,
+          "type": "acknowledge-event-result",
+          "accepted": true,
+          "eventId": "forager-instinct"
+        },
+        {
+          "tick": 1470,
+          "day": 3,
+          "type": "set-camp-priority",
+          "accepted": true,
+          "priority": "water"
+        },
+        {
+          "tick": 1950,
+          "day": 4,
+          "type": "select-event-choice",
+          "accepted": true,
+          "eventId": "freshwater-seep",
+          "choiceId": "mark-source"
+        },
+        {
+          "tick": 1950,
+          "day": 4,
+          "type": "acknowledge-event-result",
+          "accepted": true,
+          "eventId": "freshwater-seep"
+        },
+        {
+          "tick": 2790,
+          "day": 5,
+          "type": "select-event-choice",
+          "accepted": true,
+          "eventId": "seep-follow-up",
+          "choiceId": "collect-carefully"
+        },
+        {
+          "tick": 2790,
+          "day": 5,
+          "type": "acknowledge-event-result",
+          "accepted": true,
+          "eventId": "seep-follow-up"
+        },
+        {
+          "tick": 3630,
+          "day": 7,
+          "type": "select-event-choice",
+          "accepted": true,
+          "eventId": "water-dispute",
+          "choiceId": "hear-them-out"
+        },
+        {
+          "tick": 3630,
+          "day": 7,
+          "type": "acknowledge-event-result",
+          "accepted": true,
+          "eventId": "water-dispute"
+        },
+        {
+          "tick": 4470,
+          "day": 8,
+          "type": "select-event-choice",
+          "accepted": true,
+          "eventId": "smoke-on-horizon",
+          "choiceId": "conserve"
+        },
+        {
+          "tick": 4470,
+          "day": 8,
+          "type": "acknowledge-event-result",
+          "accepted": true,
+          "eventId": "smoke-on-horizon"
+        },
+        {
+          "tick": 5310,
+          "day": 9,
+          "type": "select-event-choice",
+          "accepted": true,
+          "eventId": "interior-signal",
+          "choiceId": "turn-back"
+        },
+        {
+          "tick": 5310,
+          "day": 9,
+          "type": "acknowledge-event-result",
+          "accepted": true,
+          "eventId": "interior-signal"
+        },
+        {
+          "tick": 6150,
+          "day": 11,
+          "type": "select-event-choice",
+          "accepted": true,
+          "eventId": "leaking-roof",
+          "choiceId": "patch"
+        },
+        {
+          "tick": 6150,
+          "day": 11,
+          "type": "acknowledge-event-result",
+          "accepted": true,
+          "eventId": "leaking-roof"
+        },
+        {
+          "tick": 6990,
+          "day": 12,
+          "type": "select-event-choice",
+          "accepted": true,
+          "eventId": "night-watch",
+          "choiceId": "sleep-safe"
+        },
+        {
+          "tick": 6990,
+          "day": 12,
+          "type": "acknowledge-event-result",
+          "accepted": true,
+          "eventId": "night-watch"
+        },
+        {
+          "tick": 7830,
+          "day": 14,
+          "type": "select-event-choice",
+          "accepted": true,
+          "eventId": "storm-front",
+          "choiceId": "wait-it-out"
+        },
+        {
+          "tick": 7830,
+          "day": 14,
+          "type": "acknowledge-event-result",
+          "accepted": true,
+          "eventId": "storm-front"
+        }
+      ]
+    },
+    {
+      "seed": "review-5",
+      "gameSeed": "review-5",
+      "policy": "m3-conservative",
+      "policyId": "conservative",
+      "version": "m3",
+      "policyVersion": "1.0.0",
+      "policySeed": "1938b32ec12016f238e1bca2d90d93d2cca07b683e7555fcbd0b2990d5b0b32a",
+      "excludedEventId": null,
+      "mode": "production",
+      "status": "victory",
+      "tick": 8400,
+      "day": 14,
+      "survivorCount": 3,
+      "aliveCount": 2,
+      "eventCount": 10,
+      "minDecisionSpacingTicks": 840,
+      "maxDecisionGapTicks": 840,
+      "pacing": {
+        "decisionTicks": [270, 1110, 1950, 2790, 3630, 4470, 5310, 6150, 6990, 7830],
+        "startToFirstDecisionTicks": 270,
+        "lastDecisionToEndingTicks": 570,
+        "maxDecisionGapTicks": 840,
+        "decisionsPerPhase": {
+          "early": 3,
+          "middle": 4,
+          "late": 3
+        },
+        "intervals": [
+          {
+            "startTick": 0,
+            "endTick": 270,
+            "ticks": 270,
+            "unexplainedOverdueTicks": 0
+          },
+          {
+            "startTick": 270,
+            "endTick": 1110,
+            "ticks": 840,
+            "unexplainedOverdueTicks": 0
+          },
+          {
+            "startTick": 1110,
+            "endTick": 1950,
+            "ticks": 840,
+            "unexplainedOverdueTicks": 0
+          },
+          {
+            "startTick": 1950,
+            "endTick": 2790,
+            "ticks": 840,
+            "unexplainedOverdueTicks": 0
+          },
+          {
+            "startTick": 2790,
+            "endTick": 3630,
+            "ticks": 840,
+            "unexplainedOverdueTicks": 0
+          },
+          {
+            "startTick": 3630,
+            "endTick": 4470,
+            "ticks": 840,
+            "unexplainedOverdueTicks": 0
+          },
+          {
+            "startTick": 4470,
+            "endTick": 5310,
+            "ticks": 840,
+            "unexplainedOverdueTicks": 0
+          },
+          {
+            "startTick": 5310,
+            "endTick": 6150,
+            "ticks": 840,
+            "unexplainedOverdueTicks": 0
+          },
+          {
+            "startTick": 6150,
+            "endTick": 6990,
+            "ticks": 840,
+            "unexplainedOverdueTicks": 0
+          },
+          {
+            "startTick": 6990,
+            "endTick": 7830,
+            "ticks": 840,
+            "unexplainedOverdueTicks": 0
+          },
+          {
+            "startTick": 7830,
+            "endTick": 8400,
+            "ticks": 570,
+            "unexplainedOverdueTicks": 0
+          }
+        ],
+        "ineligiblePeriods": [],
+        "gapCompliance": true
+      },
+      "fullLengthRun": true,
+      "followUpsDroppedDueToCap": 0,
+      "decisionCompliance": true,
+      "gapCompliance": true,
+      "taskReasonCounts": {
+        "stock-water": 15,
+        "stock-food": 14,
+        "stock-materials": 9,
+        "low-energy": 1347,
+        "repair-shelter": 6,
+        "night-sleep": 299,
+        "critical-thirst": 34,
+        "critical-hunger": 30,
+        "critical-health": 973
+      },
+      "priorityUsage": {
+        "balanced": 1,
+        "water": 2,
+        "food": 0,
+        "build": 0,
+        "recover": 0
+      },
+      "frequencies": {
+        "priorities": {
+          "water": 2,
+          "balanced": 1
+        },
+        "rootEvents": {
+          "forager-instinct": 1,
+          "interior-signal": 1,
+          "tide-pools": 1,
+          "water-dispute": 1,
+          "freshwater-seep": 1,
+          "smoke-on-horizon": 1,
+          "driftwood-cache": 1,
+          "night-watch": 1,
+          "leaking-roof": 1
+        },
+        "followUps": {
+          "seep-follow-up": 1
+        },
+        "automaticEffects": {},
+        "choices": {
+          "forager-instinct/trust-instinct": 1,
+          "interior-signal/turn-back": 1,
+          "tide-pools/harvest": 1,
+          "water-dispute/hear-them-out": 1,
+          "freshwater-seep/mark-source": 1,
+          "seep-follow-up/collect-carefully": 1,
+          "smoke-on-horizon/conserve": 1,
+          "driftwood-cache/leave-wood": 1,
+          "night-watch/sleep-safe": 1,
+          "leaking-roof/patch": 1
+        },
+        "taskReasons": {
+          "stock-water": 15,
+          "stock-food": 14,
+          "stock-materials": 9,
+          "low-energy": 1347,
+          "repair-shelter": 6,
+          "night-sleep": 299,
+          "critical-thirst": 34,
+          "critical-hunger": 30,
+          "critical-health": 973
+        },
+        "damageByEvent": {},
+        "resourceLossByEvent": {
+          "leaking-roof": 2
+        }
+      },
+      "deaths": [
+        {
+          "survivorId": "survivor-2",
+          "day": 14,
+          "tick": 8257,
+          "causes": ["thirst", "hunger"]
+        }
+      ],
+      "maxTasklessRunningSteps": 93,
+      "endingQuality": "barely-alive",
+      "minResources": {
+        "water": 0,
+        "food": 0,
+        "materials": 0
+      },
+      "minSources": {
+        "water": 0,
+        "forage": 0,
+        "wreckage": 0,
+        "forest": 1
+      },
+      "initialInvariantFailures": [],
+      "invariantFailures": [],
+      "serializedStateBytes": 14078,
+      "commandTrace": [
+        {
+          "tick": 0,
+          "day": 1,
+          "type": "set-camp-priority",
+          "accepted": true,
+          "priority": "water"
+        },
+        {
+          "tick": 270,
+          "day": 1,
+          "type": "select-event-choice",
+          "accepted": true,
+          "eventId": "forager-instinct",
+          "choiceId": "trust-instinct"
+        },
+        {
+          "tick": 270,
+          "day": 1,
+          "type": "acknowledge-event-result",
+          "accepted": true,
+          "eventId": "forager-instinct"
+        },
+        {
+          "tick": 600,
+          "day": 2,
+          "type": "set-camp-priority",
+          "accepted": true,
+          "priority": "balanced"
+        },
+        {
+          "tick": 1110,
+          "day": 2,
+          "type": "select-event-choice",
+          "accepted": true,
+          "eventId": "interior-signal",
+          "choiceId": "turn-back"
+        },
+        {
+          "tick": 1110,
+          "day": 2,
+          "type": "acknowledge-event-result",
+          "accepted": true,
+          "eventId": "interior-signal"
+        },
+        {
+          "tick": 1470,
+          "day": 3,
+          "type": "set-camp-priority",
+          "accepted": true,
+          "priority": "water"
+        },
+        {
+          "tick": 1950,
+          "day": 4,
+          "type": "select-event-choice",
+          "accepted": true,
+          "eventId": "tide-pools",
+          "choiceId": "harvest"
+        },
+        {
+          "tick": 1950,
+          "day": 4,
+          "type": "acknowledge-event-result",
+          "accepted": true,
+          "eventId": "tide-pools"
+        },
+        {
+          "tick": 2790,
+          "day": 5,
+          "type": "select-event-choice",
+          "accepted": true,
+          "eventId": "water-dispute",
+          "choiceId": "hear-them-out"
+        },
+        {
+          "tick": 2790,
+          "day": 5,
+          "type": "acknowledge-event-result",
+          "accepted": true,
+          "eventId": "water-dispute"
+        },
+        {
+          "tick": 3630,
+          "day": 7,
+          "type": "select-event-choice",
+          "accepted": true,
+          "eventId": "freshwater-seep",
+          "choiceId": "mark-source"
+        },
+        {
+          "tick": 3630,
+          "day": 7,
+          "type": "acknowledge-event-result",
+          "accepted": true,
+          "eventId": "freshwater-seep"
+        },
+        {
+          "tick": 4470,
+          "day": 8,
+          "type": "select-event-choice",
+          "accepted": true,
+          "eventId": "seep-follow-up",
+          "choiceId": "collect-carefully"
+        },
+        {
+          "tick": 4470,
+          "day": 8,
+          "type": "acknowledge-event-result",
+          "accepted": true,
+          "eventId": "seep-follow-up"
+        },
+        {
+          "tick": 5310,
+          "day": 9,
+          "type": "select-event-choice",
+          "accepted": true,
+          "eventId": "smoke-on-horizon",
+          "choiceId": "conserve"
+        },
+        {
+          "tick": 5310,
+          "day": 9,
+          "type": "acknowledge-event-result",
+          "accepted": true,
+          "eventId": "smoke-on-horizon"
+        },
+        {
+          "tick": 6150,
+          "day": 11,
+          "type": "select-event-choice",
+          "accepted": true,
+          "eventId": "driftwood-cache",
+          "choiceId": "leave-wood"
+        },
+        {
+          "tick": 6150,
+          "day": 11,
+          "type": "acknowledge-event-result",
+          "accepted": true,
+          "eventId": "driftwood-cache"
+        },
+        {
+          "tick": 6990,
+          "day": 12,
+          "type": "select-event-choice",
+          "accepted": true,
+          "eventId": "night-watch",
+          "choiceId": "sleep-safe"
+        },
+        {
+          "tick": 6990,
+          "day": 12,
+          "type": "acknowledge-event-result",
+          "accepted": true,
+          "eventId": "night-watch"
+        },
+        {
+          "tick": 7830,
+          "day": 14,
+          "type": "select-event-choice",
+          "accepted": true,
+          "eventId": "leaking-roof",
+          "choiceId": "patch"
+        },
+        {
+          "tick": 7830,
+          "day": 14,
+          "type": "acknowledge-event-result",
+          "accepted": true,
+          "eventId": "leaking-roof"
+        }
+      ]
+    }
+  ]
+}

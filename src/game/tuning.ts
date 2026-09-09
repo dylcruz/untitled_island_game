@@ -1,6 +1,6 @@
 import type { GameConfig } from './types';
 import type { ProbabilityRange, RiskLevel } from './types';
-export const RULES_VERSION = 'm5-balance-1';
+export const RULES_VERSION = 'mvp-arc-1';
 
 /** Central qualitative risk contract used by every probabilistic event effect. */
 export const RISK_PROBABILITY_RANGES: Readonly<Record<RiskLevel, ProbabilityRange>> = {
@@ -70,6 +70,8 @@ export const TUNING = {
   productionEventSpacingDays: 0.8,
   productionEventDeadlineDays: 2,
   productionEventDecisionCap: 10,
+  // Ten shared root/follow-up slots: early 3, middle 4, late 3.
+  productionEventSlotDays: [0.45, 1.85, 3.25, 4.65, 6.05, 7.45, 8.85, 10.25, 11.65, 13.05],
   riskProbability: { low: 0.2, moderate: 0.45, high: 0.7 },
   riskProbabilityRanges: RISK_PROBABILITY_RANGES,
   /**
