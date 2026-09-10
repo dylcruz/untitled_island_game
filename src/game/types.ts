@@ -201,6 +201,24 @@ export interface EffectData {
   /** The risk band must agree with the containing choice when probability is set. */
   riskLevel?: RiskLevel;
 }
+/** A numeric change measured immediately around authoritative application. */
+export interface AppliedChange {
+  kind: Exclude<EffectKind, 'injury'>;
+  target?: ResourceId | keyof NeedState;
+  survivorId?: string;
+  before: number;
+  after: number;
+  delta: number;
+}
+export interface ResolvedEffect {
+  effect: EffectData;
+  fired: boolean;
+  changes: AppliedChange[];
+  injuries: { survivorId: string; before: InjuryState | null; after: InjuryState }[];
+}
+export interface ResolvedOutcome {
+  effects: ResolvedEffect[];
+}
 export interface EventChoiceDefinition {
   id: ChoiceId;
   label: string;
@@ -235,6 +253,7 @@ export interface ActiveEvent {
   referencedChoice?: { eventId: EventId; choiceId: ChoiceId };
   chosenChoiceId: ChoiceId | null;
   result: string | null;
+  outcome?: ResolvedOutcome;
 }
 export interface ScheduledEffect {
   id: string;
@@ -264,6 +283,7 @@ export interface ChoiceRecord {
   tick: number;
   participantIds: string[];
   result: string;
+  outcome?: ResolvedOutcome;
 }
 export interface TurningPointRecord {
   id: string;

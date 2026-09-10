@@ -360,3 +360,40 @@ for (const viewport of [
     });
   });
 }
+
+for (const seed of ['result-review-1', 'issue4-roll-2']) {
+  test(`resolved fallen-palm outcome survives reload: ${seed}`, async ({ page }) => {
+    const state = createGame(seed);
+    state.reservations = [];
+    for (const survivor of state.survivors) survivor.activeTask = null;
+    state.resources.food = 19;
+    state.status = 'decision';
+    state.eventSchedule.nextEventTick = null;
+    state.activeEvent = {
+      id: 'fallen-palm',
+      activatedTick: 0,
+      participantIds: [state.survivors[0]!.id],
+      chosenChoiceId: null,
+      result: null,
+    };
+    const resolved = applyCommand(state, {
+      type: 'select-event-choice',
+      eventId: 'fallen-palm',
+      choiceId: 'reach',
+    }).state;
+    await installProductionSave(page, serializeSave(resolved));
+    for (let reload = 0; reload < 2; reload++) {
+      await page.goto('/');
+      await page.getByTestId('resume-saved').click();
+      const dialog = page.getByRole('dialog');
+      await expect(dialog).toContainText(resolved.activeEvent!.result!);
+      await expect(page.getByTestId('result-details')).toContainText('Camp: food +1');
+      await expect(page.getByTestId('result-details')).not.toContainText('if the risk occurs');
+      await expect(dialog).not.toContainText('painful sprain');
+      const injured = Boolean(resolved.survivors[0]!.injury);
+      await expect(page.getByTestId('result-details')).toContainText(
+        injured ? 'suffered a sprain' : 'sprain risk did not occur',
+      );
+    }
+  });
+}

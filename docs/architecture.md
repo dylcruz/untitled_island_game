@@ -112,6 +112,20 @@ priority and reserve remaining budget; roots that can promise follow-ups need
 room for those promises. Delayed slots retain the 0.8-day minimum spacing.
 See [issue #3 evidence](evidence/issue-3/README.md) for allocation, boundary-gap
 reporting, and completed full-batch balance checks.
+Effect application captures a serializable resolved outcome for each choice:
+conditional effects that fired or were skipped, exact numeric before/after values
+and deltas after caps, and injury replacements with their morale side effects.
+Results, choice history, and ending turning points use prose derived from these
+records; result details list applied changes rather than authored possibilities.
+Delayed consequences stay scheduled until their due tick, when history reports
+their actual applied changes. Nested outcome snapshots are detached.
+
+Save schema 2 requires validated outcome records and derived prose for resolved
+choices. An active result must match its historical record and final applied
+values in current state. Schema 1 saves are explicitly incompatible: the old
+fixed text cannot reliably reconstruct historical rolls or capped gains, so the
+existing recovery UI offers a fresh run without inventing a migration.
+
 Interactive decisions set `status` to `decision`; the result remains visible as
 `event-result` until an acknowledgement command. Definitions and the mode
 registry live in [`src/game/events.ts`](../src/game/events.ts#L16-L113), while
@@ -192,7 +206,7 @@ core state to store display values.
 ## Local guarded persistence
 
 `LocalSaveAdapter` is the only browser-storage boundary. It serializes a cloned
-state in a version-1 envelope containing `schemaVersion`, `rulesVersion`,
+state in a version-2 envelope containing `schemaVersion`, `rulesVersion`,
 `savedAt`, and `gameState`; the payload is limited to 512 KiB by UTF-8 byte
 length. `parseSaveEnvelope` validates config, status, clock, resources,
 survivors, task/reservation links, event provenance, histories, metrics, and all
