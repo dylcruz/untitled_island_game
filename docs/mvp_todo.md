@@ -90,9 +90,9 @@ historical evidence, with the measurement limitation described below.
 
 ### Priority 2: Make all three survivors and camp priorities legible
 
-- [ ] Distribute event participation among eligible survivors using a
+- [x] Distribute event participation among eligible survivors using a
       deterministic rule that accounts for context and recent participation.
-      `participantsFor` takes the first eligible survivor(s) in array order;
+      Previously, `participantsFor` took the first eligible survivor(s) in array order;
       in the six runs above, survivor 1 participated in 9–10 decisions and
       survivor 3 in none in five runs. Preserve trait, availability, and
       prior-choice constraints, and retain original participants for personal

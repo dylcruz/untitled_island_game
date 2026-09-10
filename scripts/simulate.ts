@@ -117,6 +117,7 @@ interface Result {
   survivorCount: number;
   aliveCount: number;
   eventCount: number;
+  participationBySurvivor: Record<string, number>;
   minDecisionSpacingTicks: number | null;
   maxDecisionGapTicks: number;
   decisionCompliance: boolean;
@@ -829,6 +830,13 @@ function runOnce(
       survivorCount: snapshot.survivors.length,
       aliveCount: snapshot.survivors.filter((s) => s.alive).length,
       eventCount: snapshot.metrics.interactiveEventCount,
+      participationBySurvivor: Object.fromEntries(
+        snapshot.survivors.map((survivor) => [
+          survivor.id,
+          snapshot.choiceRecords.filter((record) => record.participantIds.includes(survivor.id))
+            .length,
+        ]),
+      ),
       minDecisionSpacingTicks: gaps.length ? Math.min(...gaps) : null,
       maxDecisionGapTicks: pacing.maxDecisionGapTicks,
       pacing,
@@ -857,12 +865,15 @@ function merge(target: Record<string, number>, source: Record<string, number>): 
 function aggregate(results: readonly Result[]) {
   const victories = results.filter((r) => r.status === 'victory');
   const all = victories.filter((r) => r.aliveCount === r.survivorCount);
+  const participationBySurvivor: Record<string, number> = {};
+  for (const result of results) merge(participationBySurvivor, result.participationBySurvivor);
   const frequencies = emptyFrequencies();
   for (const result of results)
     for (const key of Object.keys(frequencies) as (keyof Frequencies)[])
       merge(frequencies[key], result.frequencies[key]);
   return {
     runs: results.length,
+    participationBySurvivor,
     victories: victories.length,
     victoryRate: victories.length / results.length,
     rescueRate: victories.length / results.length,
