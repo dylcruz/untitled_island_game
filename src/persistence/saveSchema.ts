@@ -51,7 +51,7 @@ const SOURCE_IDS = ['water', 'forage', 'wreckage', 'forest'] as const;
 const RESOURCE_IDS = ['water', 'food', 'materials'] as const;
 const NEED_IDS = ['health', 'hunger', 'thirst', 'energy'] as const;
 const INJURY_KINDS = ['cut', 'sprain', 'burn'] as const;
-const RISK_LEVELS = ['low', 'moderate', 'high'] as const;
+const RISK_LEVELS = ['none', 'low', 'moderate', 'high'] as const;
 const RISK_SEVERITIES = ['none', 'minor', 'moderate', 'severe'] as const;
 const STATUSES = ['running', 'decision', 'event-result', 'victory', 'defeat'] as const;
 const TASK_KINDS = [
@@ -240,16 +240,25 @@ function isRiskPresentation(value: unknown): boolean {
     !isFiniteNumber(value.probabilityRange.max)
   )
     return false;
+  if (value.level === 'none')
+    return (
+      value.severity === 'none' &&
+      value.probabilityRange.min === 0 &&
+      value.probabilityRange.max === 0
+    );
   const range = RISK_PROBABILITY_RANGES[value.level as RiskLevel];
   return value.probabilityRange.min === range.min && value.probabilityRange.max === range.max;
 }
 
 function isAuthoritativeChoice(choice: EventDefinition['choices'][number]): boolean {
   if (!isRiskPresentation(choice.risk)) return false;
-  for (const effect of [
+  const effects = [
     ...choice.immediateEffects,
     ...(choice.delayedEffect ? [choice.delayedEffect.effect] : []),
-  ]) {
+  ];
+  if (effects.some((effect) => effect.probability !== undefined) !== (choice.risk.level !== 'none'))
+    return false;
+  for (const effect of effects) {
     if (!isEffect(effect)) return false;
     if (effect.probability !== undefined && effect.riskLevel !== choice.risk.level) return false;
   }

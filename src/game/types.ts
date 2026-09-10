@@ -187,7 +187,7 @@ export interface ProbabilityRange {
   max: number;
 }
 export interface RiskPresentation {
-  level: RiskLevel;
+  level: RiskLevel | 'none';
   label: string;
   severity: RiskSeverity;
   probabilityRange: ProbabilityRange;

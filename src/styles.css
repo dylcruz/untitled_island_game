@@ -851,6 +851,7 @@ code {
   padding: 0.12rem 0.42rem;
 }
 
+.risk-none,
 .risk-low {
   color: #28635d;
 }
