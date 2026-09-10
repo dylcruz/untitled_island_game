@@ -2,7 +2,12 @@ import { getChoiceAvailability } from './choiceAvailability';
 import { cloneOutcome, describeOutcome, describeResolvedEffect } from './outcomes';
 import { createIslandState, waypointPosition } from './island';
 import { EVENT_BY_ID, eventRegistryForMode, PRODUCTION_EVENT_DEFINITIONS } from './events';
-import { cloneRandomStreamStates, createRandomStreamStates, DeterministicRandom } from './random';
+import {
+  cloneRandomStreamStates,
+  createRandomStreamStates,
+  deriveStreamState,
+  DeterministicRandom,
+} from './random';
 import { generateTraitPair, moraleLossMultiplier, productivityMultiplier } from './traits';
 import { DEFAULT_GAME_CONFIG, SLICE_GAME_CONFIG, TUNING, validateGameConfig } from './tuning';
 import type {
@@ -771,7 +776,7 @@ function applyEffect(
   return resolved;
 }
 
-function participantsFor(state: GameState, event: EventDefinition): string[] | null {
+function eligibleParticipants(state: GameState, event: EventDefinition): SurvivorState[] {
   let candidates = state.survivors.filter(
     (value) => value.alive && value.activeTask?.kind !== 'sleep',
   );
@@ -779,8 +784,47 @@ function participantsFor(state: GameState, event: EventDefinition): string[] | n
   if (event.participantRule === 'forager')
     candidates = candidates.filter((value) => value.traits.includes('forager'));
   if (event.participantRule === 'injured') candidates = candidates.filter((value) => value.injury);
+  return candidates;
+}
+
+export function participantsFor(state: GameState, event: EventDefinition): string[] | null {
+  const candidates = eligibleParticipants(state, event);
   const count = event.participantRule === 'pair' ? 2 : 1;
-  return candidates.length >= count ? candidates.slice(0, count).map((value) => value.id) : null;
+  if (candidates.length < count) return null;
+  const prior = event.requiresPriorChoice
+    ? state.choiceRecords.find(
+        (record) =>
+          record.eventId === event.requiresPriorChoice!.eventId &&
+          (!event.requiresPriorChoice!.choiceId ||
+            record.choiceId === event.requiresPriorChoice!.choiceId),
+      )
+    : undefined;
+  // Preserve eligible original participants before distributing new opportunities.
+  // Recency comes only from resolved choices, so saves need no extra counters.
+  const ranked = candidates.map((survivor) => {
+    const records = state.choiceRecords.filter((record) =>
+      record.participantIds.includes(survivor.id),
+    );
+    return {
+      id: survivor.id,
+      original: prior?.participantIds.includes(survivor.id) ? 0 : 1,
+      lastTick: records.reduce((latest, record) => Math.max(latest, record.tick), -1),
+      count: records.length,
+      tie: deriveStreamState(
+        state.config.seed,
+        `event-participant:${event.id}:${state.clock.tick}:${survivor.id}`,
+      ).state,
+    };
+  });
+  ranked.sort(
+    (a, b) =>
+      a.original - b.original ||
+      a.lastTick - b.lastTick ||
+      a.count - b.count ||
+      a.tie - b.tie ||
+      (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
+  );
+  return ranked.slice(0, count).map((value) => value.id);
 }
 function eligibleEvent(
   state: GameState,
@@ -823,7 +867,7 @@ function eligibleEvent(
     )
   )
     return false;
-  return participantsFor(state, event) !== null;
+  return eligibleParticipants(state, event).length >= (event.participantRule === 'pair' ? 2 : 1);
 }
 
 function selectionWeight(state: GameState, event: EventDefinition): number {

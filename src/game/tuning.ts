@@ -1,6 +1,6 @@
 import type { GameConfig } from './types';
 import type { ProbabilityRange, RiskLevel } from './types';
-export const RULES_VERSION = 'mvp-arc-1';
+export const RULES_VERSION = 'mvp-participation-1';
 
 /** Central qualitative risk contract used by every probabilistic event effect. */
 export const RISK_PROBABILITY_RANGES: Readonly<Record<RiskLevel, ProbabilityRange>> = {

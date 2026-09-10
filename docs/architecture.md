@@ -106,12 +106,23 @@ The event scheduler selects eligible authored templates by phase, cooldown,
 resource, participant, and prior-choice constraints. Production has weighted
 root events, queued follow-ups, and a decision cap; choosing an event can apply
 immediate effects, schedule a delayed effect, and queue a linked follow-up.
-Production rules `mvp-arc-1` open ten shared decision slots across the
+Production rules `mvp-participation-1` open ten shared decision slots across the
 14-day arc (planned early/middle/late allocation 3/4/3). Ready follow-ups take
 priority and reserve remaining budget; roots that can promise follow-ups need
 room for those promises. Delayed slots retain the 0.8-day minimum spacing.
 See [issue #3 evidence](evidence/issue-3/README.md) for allocation, boundary-gap
 reporting, and completed full-batch balance checks.
+Event participants are chosen from living, awake survivors (falling back to
+living survivors only when everyone is asleep), with authored trait and injury
+constraints preserved. Eligible original follow-up participants take precedence;
+remaining places go to those whose last recorded participation is oldest, then
+those with fewer recorded choices. Ties use a hash of seed, event, tick, and
+survivor ID, followed by lexical survivor ID, independent of array order and
+without advancing an RNG stream. Recency is derived from choice records and
+survives save/resume without new save fields. Unavailable originals can be
+replaced by eligible survivors for the current camp-wide follow-ups. Group
+consequences still affect the group; choice memories name only participants.
+
 Effect application captures a serializable resolved outcome for each choice:
 conditional effects that fired or were skipped, exact numeric before/after values
 and deltas after caps, and injury replacements with their morale side effects.
