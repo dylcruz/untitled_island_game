@@ -145,14 +145,16 @@ describe('resolved event outcomes', () => {
 
   it('detaches active, historical, cloned and published nested records', () => {
     const state = reach(decision('issue4-roll-2'));
-    const original = serializeSave(state);
+    // Keep save metadata fixed so elapsed wall-clock time cannot affect this comparison.
+    const savedAt = '2026-09-10T00:00:00.000Z';
+    const original = serializeSave(state, savedAt);
     for (const copy of [cloneGameState(state), createSnapshot(state)]) {
       copy.activeEvent!.outcome!.effects[0]!.changes[0]!.delta = 999;
       copy.choiceRecords[0]!.outcome!.effects[0]!.effect.amount = 999;
       copy.activeEvent!.outcome!.effects[1]!.injuries[0]!.after.severity = 3;
       copy.choiceRecords[0]!.outcome!.effects[1]!.injuries[0]!.after.recoveryTicksRemaining = 1;
     }
-    expect(serializeSave(state)).toBe(original);
+    expect(serializeSave(state, savedAt)).toBe(original);
     state.activeEvent!.outcome!.effects[0]!.changes[0]!.delta = 999;
     expect(state.choiceRecords[0]!.outcome!.effects[0]!.changes[0]!.delta).toBe(3);
   });
