@@ -1,3 +1,5 @@
+import { createGame } from '../src/game/simulation';
+import { parseSaveEnvelope, serializeSave } from '../src/persistence/saveSchema';
 import { expect, test } from '@playwright/test';
 
 test('presents the authored island, distinct survivor portraits, and production history', async ({
@@ -105,3 +107,70 @@ test('keeps M3 presentation readable and keyboard-usable at 360px', async ({ pag
   await lastDialogButton.press('Tab');
   await expect(firstDialogButton).toBeFocused();
 });
+
+for (const materials of [0, 1.6, 2 - Number.EPSILON, 2]) {
+  test(`fractional supplies and pre-selection affordability at ${materials} materials`, async ({
+    page,
+    isMobile,
+  }) => {
+    const state = createGame('issue-6-supplies');
+    state.reservations = [];
+    for (const survivor of state.survivors) survivor.activeTask = null;
+    state.status = 'decision';
+    state.eventSchedule.nextEventTick = null;
+    state.resources = { water: 0, food: 0.25, materials };
+    state.island.sourceStates.forage.available = 0.25;
+    state.activeEvent = {
+      id: 'leaking-roof',
+      activatedTick: 0,
+      participantIds: [state.survivors[0]!.id],
+      chosenChoiceId: null,
+      result: null,
+    };
+    const raw = serializeSave(state, '2026-09-09T00:00:00.000Z');
+    expect(parseSaveEnvelope(raw).ok).toBe(true);
+    await page.addInitScript((save) => localStorage.setItem('untitled-island:resume', save), raw);
+    await page.goto('/');
+    await page.getByTestId('resume-saved').click();
+    const supplies = page.getByRole('region', { name: 'Supplies and shelter' });
+    await expect(
+      supplies.locator('dl > div').filter({ has: page.getByText('Water', { exact: true }) }),
+    ).toHaveText('Water0 Depleted');
+    await expect(
+      supplies.locator('dl > div').filter({ has: page.getByText('Food', { exact: true }) }),
+    ).toHaveText('Food0.25 Low');
+    const shown = materials === 0 ? '0' : materials === 1.6 ? '1.6' : materials < 2 ? '1.99' : '2';
+    await expect(
+      supplies.locator('dl > div').filter({ has: page.getByText('Materials', { exact: true }) }),
+    ).toHaveText(`Materials${shown} ${materials === 0 ? 'Depleted' : 'Low'}`);
+    await expect(page.getByRole('region', { name: 'Source availability' })).toContainText('0.25 /');
+    const dialog = page.getByRole('dialog');
+    const patch = dialog.getByRole('button', { name: 'Choose Spend materials' });
+    await expect(patch).toBeFocused();
+    if (materials < 2) {
+      const reason = `Unavailable: requires 2 materials; you have ${shown}.`;
+      await expect(dialog.getByText(reason, { exact: true })).toBeVisible();
+      await expect(patch).toHaveAttribute('aria-disabled', 'true');
+      await expect(patch).toHaveAccessibleDescription(reason);
+      await patch.press('Enter');
+      await patch.press('Space');
+      // Playwright intentionally refuses normal clicks on aria-disabled buttons;
+      // raw touch/mouse input verifies that our handler also prevents activation.
+      await patch.scrollIntoViewIfNeeded();
+      const box = (await patch.boundingBox())!;
+      if (isMobile) await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
+      else await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+      await expect(dialog.getByRole('heading', { name: 'A Leaking Roof' })).toBeVisible();
+      await expect(page.getByRole('alert')).toHaveCount(0);
+      await patch.press('Tab');
+      const endure = dialog.getByRole('button', { name: 'Choose Endure the leak' });
+      await expect(endure).toBeFocused();
+      await endure.press('Enter');
+    } else {
+      await expect(patch).toHaveAttribute('aria-disabled', 'false');
+      await expect(dialog.locator('.choice-unavailable')).toHaveCount(0);
+      await patch.press('Enter');
+    }
+    await expect(dialog.getByRole('heading', { name: 'Decision result' })).toBeVisible();
+  });
+}

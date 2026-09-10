@@ -86,7 +86,7 @@ historical evidence, with the measurement limitation described below.
       and night watch labels a morale setback as severe. Acceptance: players
       can identify the cost, possible setback, and any future commitment
       without inferring an unimplemented resource or rescue mechanic.
-- [ ] Make fractional supplies and affordability readable. `formatValue` in
+- [x] Make fractional supplies and affordability readable. `formatValue` in
       [App.tsx](../src/App.tsx) rounds all stocks and sources: 0.25 food reads
       as 0, while 1.6 materials reads as 2 but cannot pay a two-material cost.
       Use compact fractional formatting that does not hide positive stock or
