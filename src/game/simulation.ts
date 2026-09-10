@@ -1,3 +1,4 @@
+import { getChoiceAvailability } from './choiceAvailability';
 import { cloneOutcome, describeOutcome, describeResolvedEffect } from './outcomes';
 import { createIslandState, waypointPosition } from './island';
 import { EVENT_BY_ID, eventRegistryForMode, PRODUCTION_EVENT_DEFINITIONS } from './events';
@@ -1258,18 +1259,7 @@ function selectEventChoice(state: GameState, eventId: EventId, choiceId: string)
     return { state, accepted: false, reason: 'event-id-mismatch' };
   const choice = EVENT_BY_ID[eventId].choices.find((value) => value.id === choiceId);
   if (!choice) return { state, accepted: false, reason: 'unknown-choice' };
-  const resourceCosts: Partial<Record<ResourceId, number>> = {};
-  for (const effect of choice.immediateEffects) {
-    if (effect.kind !== 'resource' || effect.amount >= 0 || !effect.target) continue;
-    const resourceId = effect.target as ResourceId;
-    if (!(resourceId in state.resources)) continue;
-    resourceCosts[resourceId] = (resourceCosts[resourceId] ?? 0) - effect.amount;
-  }
-  if (
-    (Object.entries(resourceCosts) as [ResourceId, number][]).some(
-      ([resourceId, cost]) => state.resources[resourceId] < cost,
-    )
-  )
+  if (!getChoiceAvailability(state.resources, choice).affordable)
     return { state, accepted: false, reason: 'insufficient-resources' };
   const next = copyState(state);
   const participantIds = next.activeEvent?.participantIds ?? [];

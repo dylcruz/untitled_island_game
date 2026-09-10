@@ -1280,3 +1280,14 @@ code {
     transition-duration: 0.01ms !important;
   }
 }
+
+.choice-unavailable {
+  color: #833d25;
+  font-size: 0.85rem;
+}
+
+.event-choice-card button[aria-disabled='true'] {
+  background: #e5e1d8;
+  color: #59554d;
+  cursor: not-allowed;
+}

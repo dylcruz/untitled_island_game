@@ -69,26 +69,29 @@ describe('resolved event outcomes', () => {
     expect(branches).toEqual(new Set([true, false]));
   });
 
-  it.each([0, TUNING.resourceCaps.food - 1, TUNING.resourceCaps.food])(
-    'measures actual capped food gains from %s',
-    (food) => {
-      const state = decision('result-review-1');
-      state.resources.food = food;
-      const next = reach(state);
-      const delta = Math.min(3, TUNING.resourceCaps.food - food);
-      expect(next.activeEvent!.outcome!.effects[0]!.changes).toEqual([
-        {
-          kind: 'resource',
-          target: 'food',
-          survivorId: undefined,
-          before: food,
-          after: food + delta,
-          delta,
-        },
-      ]);
-      expect(next.activeEvent!.result).toContain(`food ${delta ? '+' : ''}${delta}`);
-    },
-  );
+  it.each([
+    0,
+    0.25,
+    TUNING.resourceCaps.food - 0.25,
+    TUNING.resourceCaps.food - 1,
+    TUNING.resourceCaps.food,
+  ])('measures actual capped food gains from %s', (food) => {
+    const state = decision('result-review-1');
+    state.resources.food = food;
+    const next = reach(state);
+    const delta = Math.min(3, TUNING.resourceCaps.food - food);
+    expect(next.activeEvent!.outcome!.effects[0]!.changes).toEqual([
+      {
+        kind: 'resource',
+        target: 'food',
+        survivorId: undefined,
+        before: food,
+        after: food + delta,
+        delta,
+      },
+    ]);
+    expect(next.activeEvent!.result).toContain(`food ${delta ? '+' : ''}${delta}`);
+  });
 
   it('captures all authored global, group and participant effects without changing other survivors', () => {
     for (const event of Object.values(EVENT_BY_ID))

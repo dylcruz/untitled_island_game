@@ -1,3 +1,5 @@
+import { getChoiceAvailability } from './game/choiceAvailability';
+import { formatSupply } from './presentation/supplies';
 import { describeResolvedEffect } from './game/outcomes';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent, ReactElement } from 'react';
@@ -10,7 +12,6 @@ import type {
   CampPriority,
   CommandRejectionReason,
   EffectData,
-  EventChoiceDefinition,
   GameSnapshot,
   HistoryEntry,
   NeedState,
@@ -206,17 +207,6 @@ function formatProbabilityRange(min: number, max: number): string {
 
 function formatRiskSeverity(severity: RiskSeverity): string {
   return severity === 'none' ? 'No stated severity' : `${titleCase(severity)} severity`;
-}
-
-function choiceCosts(choice: EventChoiceDefinition): { resource: ResourceId; amount: number }[] {
-  const costs = new Map<ResourceId, number>();
-  for (const effect of choice.immediateEffects) {
-    if (effect.kind !== 'resource' || !effect.target || effect.amount >= 0) continue;
-    const resource = effect.target as ResourceId;
-    if (!(resource in RESOURCE_LABELS)) continue;
-    costs.set(resource, (costs.get(resource) ?? 0) - effect.amount);
-  }
-  return [...costs.entries()].map(([resource, amount]) => ({ resource, amount }));
 }
 
 function effectTargetLabel(effect: EffectData): string {
@@ -1000,15 +990,15 @@ export default function App(): ReactElement {
                 <dl>
                   <div>
                     <dt>Water</dt>
-                    <dd>{formatValue(snapshot.resources.water)}</dd>
+                    <dd>{formatSupply(snapshot.resources.water)}</dd>
                   </div>
                   <div>
                     <dt>Food</dt>
-                    <dd>{formatValue(snapshot.resources.food)}</dd>
+                    <dd>{formatSupply(snapshot.resources.food)}</dd>
                   </div>
                   <div>
                     <dt>Materials</dt>
-                    <dd>{formatValue(snapshot.resources.materials)}</dd>
+                    <dd>{formatSupply(snapshot.resources.materials)}</dd>
                   </div>
                 </dl>
               </section>
@@ -1019,7 +1009,7 @@ export default function App(): ReactElement {
                     <div key={source.id}>
                       <dt>{source.id}</dt>
                       <dd>
-                        {formatValue(source.available)} / {source.capacity}
+                        {formatSupply(source.available)} / {source.capacity}
                       </dd>
                     </div>
                   ))}
@@ -1034,7 +1024,7 @@ export default function App(): ReactElement {
                   <div>
                     <dt>Water</dt>
                     <dd>
-                      {formatValue(snapshot.resources.water)}{' '}
+                      {formatSupply(snapshot.resources.water)}{' '}
                       <span
                         className={`resource-state resource-state-${resourceStatus(snapshot.resources.water).tone}`}
                       >
@@ -1045,7 +1035,7 @@ export default function App(): ReactElement {
                   <div>
                     <dt>Food</dt>
                     <dd>
-                      {formatValue(snapshot.resources.food)}{' '}
+                      {formatSupply(snapshot.resources.food)}{' '}
                       <span
                         className={`resource-state resource-state-${resourceStatus(snapshot.resources.food).tone}`}
                       >
@@ -1056,7 +1046,7 @@ export default function App(): ReactElement {
                   <div>
                     <dt>Materials</dt>
                     <dd>
-                      {formatValue(snapshot.resources.materials)}{' '}
+                      {formatSupply(snapshot.resources.materials)}{' '}
                       <span
                         className={`resource-state resource-state-${resourceStatus(snapshot.resources.materials).tone}`}
                       >
@@ -1096,7 +1086,7 @@ export default function App(): ReactElement {
                     <div key={source.id}>
                       <dt>{formatSourceId(source.id)}</dt>
                       <dd>
-                        {formatValue(source.available)} / {source.capacity}
+                        {formatSupply(source.available)} / {source.capacity}
                       </dd>
                     </div>
                   ))}
@@ -1265,7 +1255,11 @@ export default function App(): ReactElement {
           )}
           <div className="event-actions">
             {event.choices.map((choice) => {
-              const costs = choiceCosts(choice);
+              const { costs, shortages, affordable } = getChoiceAvailability(
+                snapshot.resources,
+                choice,
+              );
+              const availabilityId = `choice-${choice.id}-availability`;
               return (
                 <article
                   className="event-choice-card"
@@ -1323,7 +1317,26 @@ export default function App(): ReactElement {
                       Possible follow-up event: {EVENT_BY_ID[choice.followUpEventId].title}.
                     </p>
                   )}
-                  <button type="button" onClick={() => choose(choice.id)}>
+                  {!affordable && (
+                    <p id={availabilityId} className="choice-unavailable">
+                      Unavailable:{' '}
+                      {shortages
+                        .map(
+                          ({ resource, amount, available }) =>
+                            `requires ${amount} ${RESOURCE_LABELS[resource]}; you have ${formatSupply(available)}`,
+                        )
+                        .join(' · ')}
+                      .
+                    </p>
+                  )}
+                  <button
+                    type="button"
+                    aria-disabled={!affordable}
+                    aria-describedby={affordable ? undefined : availabilityId}
+                    onClick={() => {
+                      if (affordable) choose(choice.id);
+                    }}
+                  >
                     Choose {choice.label}
                   </button>
                 </article>

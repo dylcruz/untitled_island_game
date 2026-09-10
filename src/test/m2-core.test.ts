@@ -275,7 +275,7 @@ describe('M2 deterministic production core', () => {
       };
       return state;
     };
-    for (const materials of [0, 1]) {
+    for (const materials of [0, 0.25, 1, 1.6, 2 - Number.EPSILON]) {
       const state = eventState(materials);
       const before = JSON.stringify(state);
       const result = applyCommand(state, {
