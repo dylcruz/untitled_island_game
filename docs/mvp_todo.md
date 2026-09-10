@@ -73,19 +73,13 @@ historical evidence, with the measurement limitation described below.
       Completed with [issue #4 evidence](evidence/issue-4/README.md).
       See `selectEventChoice` in [simulation.ts](../src/game/simulation.ts)
       and the result panel in [App.tsx](../src/App.tsx).
-- [ ] Audit event promises and risk labels against their effects. In
-      [events.ts](../src/game/events.ts), “Test them cautiously” grants 2 food,
-      while “Trust the hunch” grants 0.25 food plus morale despite describing
-      the cautious portion as smaller. “Leave the marker” immediately grants
-      water without retaining a future reserve; “Leave it for later” does not
-      retain the driftwood opportunity. Signal choices affect morale, with
-      rescue still guaranteed on the fixed date if anyone lives. Rewrite
-      these descriptions or explicitly model their promises within existing
-      systems. Distinguish certain costs from probabilistic setbacks: the UI
-      shows a 10–30% risk window even for choices without a random effect,
-      and night watch labels a morale setback as severe. Acceptance: players
-      can identify the cost, possible setback, and any future commitment
-      without inferring an unimplemented resource or rescue mechanic.
+- [x] Audit event promises and risk labels against their effects. All thirteen
+      production templates now describe existing effects, with immediate supply
+      collection instead of unimplemented reserves and an explicit fixed rescue
+      date for signal choices. Choice previews separate guaranteed costs/effects
+      from actual random setbacks (including minor night-watch morale loss), and
+      show delayed effects and possible follow-ups. The issue #5 implementation
+      PR contains the full promise → effect → correction audit and verification.
 - [x] Make fractional supplies and affordability readable. `formatValue` in
       [App.tsx](../src/App.tsx) rounds all stocks and sources: 0.25 food reads
       as 0, while 1.6 materials reads as 2 but cannot pay a two-material cost.

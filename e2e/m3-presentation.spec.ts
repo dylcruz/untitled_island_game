@@ -1,4 +1,4 @@
-import { createGame } from '../src/game/simulation';
+import { applyCommand, createGame } from '../src/game/simulation';
 import { parseSaveEnvelope, serializeSave } from '../src/persistence/saveSchema';
 import { expect, test } from '@playwright/test';
 
@@ -48,8 +48,8 @@ test('presents the authored island, distinct survivor portraits, and production 
   await expect(dialog).toBeVisible({ timeout: 5_000 });
   await expect(page.getByTestId('production-history').locator('.history-entry')).toHaveCount(8);
   await expect(dialog.getByTestId('event-choice-card')).toHaveCount(2);
-  await expect(dialog.getByText(/risk/i).first()).toBeVisible();
-  await expect(dialog.getByText(/\d+%/).first()).toBeVisible();
+  await expect(dialog.locator('.risk-badge').first()).toBeVisible();
+  await expect(dialog.getByText('Guaranteed immediate effects').first()).toBeVisible();
   await expect(dialog.getByText(/No supply cost|Supply cost/).first()).toBeVisible();
 
   const firstChoice = dialog.getByTestId('event-choice-card').first();
@@ -174,3 +174,134 @@ for (const materials of [0, 1.6, 2 - Number.EPSILON, 2]) {
     await expect(dialog.getByRole('heading', { name: 'Decision result' })).toBeVisible();
   });
 }
+
+for (const eventId of [
+  'forager-instinct',
+  'seep-follow-up',
+  'driftwood-cache',
+  'night-watch',
+  'fallen-palm',
+  'smoke-on-horizon',
+  'signal-answer',
+  'storm-front',
+] as const) {
+  test(`choice promises, certainty and setbacks for ${eventId}`, async ({ page }) => {
+    let state = createGame('issue5-preview');
+    state.reservations = [];
+    for (const survivor of state.survivors) survivor.activeTask = null;
+    state.status = 'decision';
+    state.eventSchedule.nextEventTick = null;
+    state.resources.materials = 4;
+    state.activeEvent = {
+      id: eventId,
+      activatedTick: 0,
+      participantIds: state.survivors
+        .slice(0, eventId === 'night-watch' || eventId === 'smoke-on-horizon' ? 2 : 1)
+        .map((survivor) => survivor.id),
+      chosenChoiceId: null,
+      result: null,
+    };
+    if (eventId === 'forager-instinct') state.survivors[0]!.traits = ['forager', 'resourceful'];
+    if (eventId === 'seep-follow-up' || eventId === 'signal-answer') {
+      const followUp = state.activeEvent;
+      const prior =
+        eventId === 'seep-follow-up'
+          ? { eventId: 'freshwater-seep' as const, choiceId: 'mark-source' }
+          : { eventId: 'smoke-on-horizon' as const, choiceId: 'signal' };
+      state.activeEvent = {
+        ...followUp,
+        id: prior.eventId,
+        participantIds: state.survivors
+          .slice(0, prior.eventId === 'smoke-on-horizon' ? 2 : 1)
+          .map((survivor) => survivor.id),
+      };
+      state = applyCommand(state, { type: 'select-event-choice', ...prior }).state;
+      state.status = 'decision';
+      state.activeEvent = { ...followUp, referencedChoice: prior };
+      state.eventSchedule.pendingFollowUps = [];
+    }
+    const raw = serializeSave(state);
+    expect(parseSaveEnvelope(raw).ok).toBe(true);
+    await page.addInitScript((save) => localStorage.setItem('untitled-island:resume', save), raw);
+    await page.goto('/');
+    await page.getByTestId('resume-saved').click();
+    const dialog = page.getByRole('dialog');
+    const cards = dialog.getByTestId('event-choice-card');
+    const first = cards.first();
+    const second = cards.last();
+    if (eventId === 'night-watch') {
+      await expect(first).toContainText('energy -8 · each involved survivor');
+      await expect(first).toContainText('Possible setback · Minor severity');
+      await expect(first).toContainText('morale -4 · each involved survivor · 70% chance');
+      await expect(first).toContainText('morale +6 · each involved survivor');
+      await expect(first).toContainText('Applies if its target survives');
+      await expect(second).toContainText('No random setback');
+    } else if (eventId === 'fallen-palm') {
+      await expect(first).toContainText('Moderate severity');
+      await expect(first).toContainText('sprain injury severity 2, morale -10');
+      await expect(first).toContainText('45% chance');
+    } else {
+      await expect(dialog.locator('.risk-none')).toHaveCount(2);
+      await expect(dialog).not.toContainText('% chance');
+      if (eventId === 'forager-instinct') {
+        await expect(first).toContainText('food +0.25');
+        await expect(first).toContainText('morale +4');
+        await expect(second).toContainText('larger edible portion');
+        await expect(second).toContainText('food +2');
+      }
+      if (eventId === 'seep-follow-up') {
+        await expect(second).toContainText('Fill another container');
+        await expect(second).toContainText('water +1');
+        await expect(second).toContainText('No delayed event effect or follow-up is scheduled');
+      }
+      if (eventId === 'driftwood-cache') {
+        await expect(second).toContainText('Leave it behind');
+        await expect(second).toContainText('no wood is stored or return visit arranged');
+      }
+      if (eventId === 'smoke-on-horizon' || eventId === 'signal-answer') {
+        await expect(dialog).toContainText(
+          'rescue remains scheduled for day 14 if anyone survives',
+        );
+        await expect(first).toContainText('Guaranteed supply cost');
+      }
+      if (eventId === 'smoke-on-horizon')
+        await expect(first).toContainText('Possible follow-up event: An Answering Flash');
+      if (eventId === 'storm-front')
+        await expect(first).toContainText('energy -5 · each involved survivor');
+    }
+    await first.getByRole('button').click();
+    await expect(dialog.getByRole('heading', { name: 'Decision result' })).toBeVisible();
+    const saved = await page.evaluate(() => localStorage.getItem('untitled-island:resume')!);
+    expect(parseSaveEnvelope(saved).ok).toBe(true);
+  });
+}
+
+test('does not promise a night-watch reward after rescue', async ({ page }) => {
+  const state = createGame('issue5-late-watch');
+  state.reservations = [];
+  for (const survivor of state.survivors) survivor.activeTask = null;
+  state.clock.tick = state.config.rescueTick - 100;
+  state.clock.day = 14;
+  state.status = 'decision';
+  state.eventSchedule.nextEventTick = null;
+  state.activeEvent = {
+    id: 'night-watch',
+    activatedTick: state.clock.tick,
+    participantIds: state.survivors.slice(0, 2).map((survivor) => survivor.id),
+    chosenChoiceId: null,
+    result: null,
+  };
+  const raw = serializeSave(state);
+  expect(parseSaveEnvelope(raw).ok).toBe(true);
+  await page.addInitScript((save) => localStorage.setItem('untitled-island:resume', save), raw);
+  await page.goto('/');
+  await page.getByTestId('resume-saved').click();
+  const card = page.getByTestId('event-choice-card').first();
+  await expect(card).toContainText(
+    'The delayed effect falls after rescue and will not be scheduled',
+  );
+  await card.getByRole('button').click();
+  await expect(page.getByTestId('result-details')).toContainText(
+    'Delayed consequence was not scheduled before rescue',
+  );
+});

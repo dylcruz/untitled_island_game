@@ -199,12 +199,6 @@ function titleCase(value: string): string {
   return value.replaceAll('-', ' ').replace(/\b\w/g, (character) => character.toUpperCase());
 }
 
-function formatProbabilityRange(min: number, max: number): string {
-  const lower = Math.round(min * 100);
-  const upper = Math.round(max * 100);
-  return lower === upper ? `${lower}%` : `${lower}%–${upper}%`;
-}
-
 function formatRiskSeverity(severity: RiskSeverity): string {
   return severity === 'none' ? 'No stated severity' : `${titleCase(severity)} severity`;
 }
@@ -225,13 +219,16 @@ function effectScopeLabel(effect: EffectData): string {
   return effect.targetScope === 'group'
     ? 'everyone'
     : effect.targetScope === 'participant'
-      ? 'involved survivor'
+      ? 'each involved survivor'
       : 'camp';
 }
 
 function formatEffect(effect: EffectData): string {
   const amount = `${effect.amount > 0 ? '+' : ''}${effect.amount}`;
-  const qualifier = effect.probability === undefined ? '' : ' if the risk occurs';
+  const qualifier =
+    effect.probability === undefined ? '' : ` · ${Math.round(effect.probability * 100)}% chance`;
+  if (effect.kind === 'injury')
+    return `${effectTargetLabel(effect)} severity ${effect.amount}, morale -${effect.amount * 5}, reduced productivity and ongoing morale loss until recovery · ${effectScopeLabel(effect)}${qualifier}`;
   return `${effectTargetLabel(effect)} ${amount} · ${effectScopeLabel(effect)}${qualifier}`;
 }
 
@@ -1274,7 +1271,7 @@ export default function App(): ReactElement {
                   </div>
                   <dl className="choice-facts">
                     <div>
-                      <dt>Supply cost</dt>
+                      <dt>Guaranteed supply cost</dt>
                       <dd>
                         {costs.length
                           ? costs
@@ -1285,36 +1282,56 @@ export default function App(): ReactElement {
                           : 'No supply cost'}
                       </dd>
                     </div>
-                    <div>
-                      <dt>Risk window</dt>
-                      <dd>
-                        {formatRiskSeverity(choice.risk.severity)} ·{' '}
-                        {formatProbabilityRange(
-                          choice.risk.probabilityRange.min,
-                          choice.risk.probabilityRange.max,
-                        )}
-                      </dd>
-                    </div>
                   </dl>
-                  <p className="choice-impact-label">Known immediate impact</p>
+                  <p>{choice.result}</p>
+                  <p className="choice-impact-label">Guaranteed immediate effects</p>
                   <ul className="choice-impact-list">
-                    {choice.immediateEffects.map((effect, index) => (
-                      <li key={`${choice.id}-effect-${index}`}>{formatEffect(effect)}</li>
-                    ))}
+                    {choice.immediateEffects
+                      .filter((effect) => effect.probability === undefined)
+                      .map((effect, index) => (
+                        <li key={`${choice.id}-effect-${index}`}>{formatEffect(effect)}</li>
+                      ))}
                   </ul>
-                  {choice.delayedEffect && (
-                    <p className="choice-follow-up">
-                      Follow-up in{' '}
-                      {formatDurationTicks(
-                        choice.delayedEffect.delayTicks,
-                        snapshot.config.ticksPerDay,
-                      )}
-                      : {choice.delayedEffect.description}
-                    </p>
+                  {choice.risk.level !== 'none' && (
+                    <>
+                      <p className="choice-impact-label">
+                        Possible setback · {formatRiskSeverity(choice.risk.severity)}
+                      </p>
+                      <ul className="choice-impact-list">
+                        {choice.immediateEffects
+                          .filter((effect) => effect.probability !== undefined)
+                          .map((effect, index) => (
+                            <li key={`${choice.id}-risk-${index}`}>{formatEffect(effect)}</li>
+                          ))}
+                      </ul>
+                    </>
                   )}
+                  <p>Gains and losses are limited by current values and caps.</p>
+                  {choice.delayedEffect &&
+                    (snapshot.clock.tick + choice.delayedEffect.delayTicks <=
+                    snapshot.config.rescueTick ? (
+                      <p className="choice-follow-up">
+                        Scheduled effect in{' '}
+                        {formatDurationTicks(
+                          choice.delayedEffect.delayTicks,
+                          snapshot.config.ticksPerDay,
+                        )}
+                        : {formatEffect(choice.delayedEffect.effect)}. Applies if its target
+                        survives until then.
+                      </p>
+                    ) : (
+                      <p className="choice-follow-up">
+                        The delayed effect falls after rescue and will not be scheduled.
+                      </p>
+                    ))}
                   {choice.followUpEventId && (
                     <p className="choice-follow-up">
                       Possible follow-up event: {EVENT_BY_ID[choice.followUpEventId].title}.
+                    </p>
+                  )}
+                  {!choice.delayedEffect && !choice.followUpEventId && (
+                    <p className="choice-follow-up">
+                      No delayed event effect or follow-up is scheduled.
                     </p>
                   )}
                   {!affordable && (

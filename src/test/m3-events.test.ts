@@ -48,6 +48,15 @@ describe('M3 event content and authoritative scheduling', () => {
             ? [choice.delayedEffect.effect]
             : []),
         ] as readonly EffectData[];
+        const randomEffects = effects.filter((effect) => effect.probability !== undefined);
+        expect(choice.risk.level === 'none').toBe(randomEffects.length === 0);
+        if (!randomEffects.length) {
+          expect(choice.risk).toMatchObject({
+            label: 'No random setback',
+            severity: 'none',
+            probabilityRange: { min: 0, max: 0 },
+          });
+        }
         for (const effect of effects) {
           if (effect.probability === undefined) continue;
           expect(effect.riskLevel).toBe(choice.risk.level);
@@ -57,6 +66,66 @@ describe('M3 event content and authoritative scheduling', () => {
         }
       }
     }
+  });
+
+  it('labels the night-watch morale loss as minor and keeps energy loss certain', () => {
+    const watch = PRODUCTION_EVENT_DEFINITIONS.find((event) => event.id === 'night-watch')!
+      .choices[0]!;
+    expect(watch.risk).toMatchObject({ level: 'high', severity: 'minor' });
+    expect(watch.immediateEffects).toEqual([
+      { kind: 'need', target: 'energy', amount: -8, targetScope: 'participant' },
+      {
+        kind: 'morale',
+        amount: -4,
+        targetScope: 'participant',
+        probability: 0.7,
+        riskLevel: 'high',
+      },
+    ]);
+  });
+
+  it('keeps both night-watch rolls truthful through save/resume', () => {
+    const rolls = new Set<boolean>();
+    for (let index = 0; index < 20; index++) {
+      let state = createGame(`issue5-watch-${index}`);
+      clearTasks(state);
+      state.status = 'decision';
+      state.eventSchedule.nextEventTick = null;
+      state.activeEvent = {
+        id: 'night-watch',
+        activatedTick: 0,
+        participantIds: state.survivors.slice(0, 2).map((survivor) => survivor.id),
+        chosenChoiceId: null,
+        result: null,
+      };
+      const before = state.survivors.map((survivor) => ({
+        energy: survivor.needs.energy,
+        morale: survivor.morale,
+      }));
+      state = applyCommand(state, {
+        type: 'select-event-choice',
+        eventId: 'night-watch',
+        choiceId: 'keep-watch',
+      }).state;
+      const fired = state.activeEvent!.outcome!.effects[1]!.fired;
+      rolls.add(fired);
+      for (let participant = 0; participant < 2; participant++) {
+        expect(state.survivors[participant]!.needs.energy).toBe(before[participant]!.energy - 8);
+        expect(state.survivors[participant]!.morale).toBe(
+          before[participant]!.morale - (fired ? 4 : 0),
+        );
+      }
+      expect(state.scheduledEffects[0]!.effect).toEqual({
+        kind: 'morale',
+        amount: 6,
+        targetScope: 'participant',
+      });
+      expect(state.choiceRecords[0]!.result).toBe(state.activeEvent!.result);
+      const restored = parseSaveEnvelope(serializeSave(state));
+      expect(restored.ok).toBe(true);
+      if (restored.ok) expect(restored.state).toEqual(state);
+    }
+    expect(rolls).toEqual(new Set([true, false]));
   });
 
   it('records source choice provenance and discards a participant-only effect after target death', () => {
