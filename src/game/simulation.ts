@@ -225,12 +225,12 @@ function releaseTask(state: GameState, survivor: SurvivorState): void {
     );
   survivor.activeTask = null;
 }
-function reservedMaterials(state: GameState): number {
+export function reservedMaterials(state: GameState): number {
   return state.reservations
     .filter((value) => value.kind === 'materials')
     .reduce((sum, value) => sum + (value.reservedAmount ?? 0), 0);
 }
-function availableUnreserved(state: GameState, sourceId: SourceId): number {
+export function availableUnreserved(state: GameState, sourceId: SourceId): number {
   return Math.max(
     0,
     state.island.sourceStates[sourceId].available -
@@ -353,7 +353,9 @@ function beginTask(
   return true;
 }
 
-function hardConstraintTask(
+export const CRITICAL_HEALTH = 30;
+
+export function hardConstraintTask(
   state: GameState,
   survivor: SurvivorState,
 ): [TaskKind, TaskReasonCode] | null {
@@ -361,7 +363,7 @@ function hardConstraintTask(
     return ['drink', 'critical-thirst'];
   if (survivor.needs.hunger >= TUNING.critical.hunger && state.resources.food > 0)
     return ['eat', 'critical-hunger'];
-  if (survivor.needs.health <= 30) return ['rest', 'critical-health'];
+  if (survivor.needs.health <= CRITICAL_HEALTH) return ['rest', 'critical-health'];
   if (survivor.needs.energy <= TUNING.critical.energy) return ['rest', 'low-energy'];
   if (deriveTime(state).phase === 'night') return ['sleep', 'night-sleep'];
   return null;
@@ -382,34 +384,43 @@ function interruptForHardConstraint(state: GameState, survivor: SurvivorState): 
   }
 }
 
+/** Expected output of existing gathering reservations, not spendable stock. */
+export function estimatedIncoming(state: GameState, resource: ResourceId): number {
+  return state.reservations
+    .filter((value) => value.kind !== 'materials')
+    .reduce((sum, value) => {
+      const task = state.survivors.find((entry) => entry.id === value.survivorId)?.activeTask;
+      return (
+        sum +
+        (task &&
+        sourceForTask(task.kind, value.sourceId === 'forest' ? 'forest' : 'wreckage')
+          ?.resourceId === resource
+          ? value.expectedYield
+          : 0)
+      );
+    }, 0);
+}
+
+export function plannerStockTarget(state: GameState, resource: ResourceId): number {
+  return resource === 'materials'
+    ? 6
+    : state.survivors.filter((survivor) => survivor.alive).length *
+        TUNING.planner.targetStockPerSurvivor[resource];
+}
+
 function taskScores(
   state: GameState,
   survivor: SurvivorState,
 ): { kind: TaskKind; reason: TaskReasonCode; score: number }[] {
-  const living = state.survivors.filter((value) => value.alive).length;
-  const incoming = (resource: ResourceId) =>
-    state.reservations
-      .filter((value) => value.kind !== 'materials')
-      .reduce((sum, value) => {
-        const task = state.survivors.find((entry) => entry.id === value.survivorId)?.activeTask;
-        return (
-          sum +
-          (task &&
-          sourceForTask(task.kind, value.sourceId === 'forest' ? 'forest' : 'wreckage')
-            ?.resourceId === resource
-            ? value.expectedYield
-            : 0)
-        );
-      }, 0);
   const policy = TUNING.planner.policyScores[state.campPolicy.priority];
   const scores: { kind: TaskKind; reason: TaskReasonCode; score: number }[] = [
     {
       kind: 'gather-water',
       reason: 'stock-water',
       score:
-        (living * TUNING.planner.targetStockPerSurvivor.water -
+        (plannerStockTarget(state, 'water') -
           state.resources.water -
-          incoming('water')) *
+          estimatedIncoming(state, 'water')) *
           3 +
         policy.water,
     },
@@ -417,16 +428,21 @@ function taskScores(
       kind: 'gather-food',
       reason: 'stock-food',
       score:
-        (living * TUNING.planner.targetStockPerSurvivor.food -
+        (plannerStockTarget(state, 'food') -
           state.resources.food -
-          incoming('food')) *
+          estimatedIncoming(state, 'food')) *
           3 +
         policy.food,
     },
     {
       kind: 'gather-materials',
       reason: 'stock-materials',
-      score: (6 - state.resources.materials - incoming('materials')) * 2 + policy.materials,
+      score:
+        (plannerStockTarget(state, 'materials') -
+          state.resources.materials -
+          estimatedIncoming(state, 'materials')) *
+          2 +
+        policy.materials,
     },
     {
       kind: 'repair-shelter',
@@ -558,7 +574,7 @@ interface EconomyRates {
   healthDamage: { hunger: number; thirst: number; exhaustion: number };
 }
 
-function economyRates(state: Pick<GameState, 'config'>): EconomyRates {
+export function economyRates(state: Pick<GameState, 'config'>): EconomyRates {
   if (state.config.mode === 'production') return TUNING.production;
   return {
     dawnReplenishment: TUNING.dawnReplenishment,

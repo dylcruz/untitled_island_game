@@ -86,3 +86,25 @@ test('opens survivor trait explanations with keyboard and touch', async ({ page,
   }
   expect(await page.evaluate('document.documentElement.scrollWidth')).toBeLessThanOrEqual(360);
 });
+
+test('explains supplies and priority waiting at 360px', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 800 });
+  await page.goto('/');
+  await page.getByTestId('seed-input').fill('issue-9-outlook');
+  await page.getByTestId('start-expedition').click();
+  await page.getByRole('button', { name: '0x', exact: true }).click();
+  const outlook = page.getByRole('region', { name: 'Camp outlook', exact: true });
+  await expect(outlook).toContainText('3 living');
+  await expect(outlook).toContainText('estimated incoming');
+  await expect(outlook).toContainText('Most urgent need:');
+  await page.getByTestId('priority-food').click();
+  await outlook.locator('summary').click();
+  await expect(outlook.getByTestId('priority-work')).toBeVisible();
+  await expect(outlook).toContainText('the new priority waits for the next task choice');
+  await expect(outlook).toContainText('critical self-care and nighttime sleep take precedence');
+  const sources = page.getByRole('region', { name: 'Source availability' });
+  await expect(sources).toContainText('unreserved');
+  await expect(sources).toContainText('Next dawn in');
+  await expect(sources).toContainText('Finite; no replenishment.');
+  expect(await page.evaluate('document.documentElement.scrollWidth')).toBeLessThanOrEqual(360);
+});
