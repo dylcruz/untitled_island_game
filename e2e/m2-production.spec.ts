@@ -53,3 +53,36 @@ test('keeps the production controls usable at a 360px viewport', async ({ page }
   await expect(page.getByRole('button', { name: 'Running', exact: true })).toBeDisabled();
   await expect(page.getByTestId('survivor-card')).toHaveCount(3);
 });
+
+test('opens survivor trait explanations with keyboard and touch', async ({ page, isMobile }) => {
+  await page.setViewportSize({ width: 360, height: 800 });
+  await page.goto('/');
+  await page.getByTestId('seed-input').fill('issue-8-traits');
+  await page.getByTestId('start-expedition').click();
+  await page.getByRole('button', { name: '0x', exact: true }).click();
+  const cards = page.getByTestId('survivor-card');
+  await expect(cards).toHaveCount(3);
+  for (const card of await cards.all()) {
+    const summary = card.locator('.survivor-traits summary');
+    const explanations = card.locator('.survivor-traits dl');
+    await expect(explanations).toBeHidden();
+    await summary.focus();
+    await expect(summary).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(explanations).toBeVisible();
+    await expect(explanations.locator('dt')).toHaveCount(2);
+    await expect(explanations.locator('dd')).toHaveCount(2);
+    for (const description of await explanations.locator('dd').all()) {
+      await expect(description).toBeVisible();
+      expect((await description.innerText()).length).toBeGreaterThan(20);
+    }
+    await page.keyboard.press('Space');
+    await expect(explanations).toBeHidden();
+    if (isMobile) await summary.tap();
+    else await summary.click();
+    await expect(explanations).toBeVisible();
+    const bounds = await summary.boundingBox();
+    expect(bounds!.height).toBeGreaterThanOrEqual(44);
+  }
+  expect(await page.evaluate('document.documentElement.scrollWidth')).toBeLessThanOrEqual(360);
+});

@@ -59,7 +59,7 @@ export interface TraitDefinition {
   name: string;
   description: string;
   incompatibleWith: readonly TraitId[];
-  productivity: Partial<Record<'food' | 'materials' | 'travel' | 'dangerous', number>>;
+  productivity: Partial<Record<'food' | 'materials' | 'travel', number>>;
   moraleLossMultiplier: number;
 }
 export type InjuryKind = 'cut' | 'sprain' | 'burn';

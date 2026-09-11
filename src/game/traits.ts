@@ -5,7 +5,7 @@ export const TRAIT_DEFINITIONS = [
   {
     id: 'forager',
     name: 'Forager',
-    description: 'Finds more food.',
+    description: 'Collects food faster and can spot edible leaves in a special event.',
     incompatibleWith: [],
     productivity: { food: 1.25 },
     moraleLossMultiplier: 1,
@@ -13,7 +13,8 @@ export const TRAIT_DEFINITIONS = [
   {
     id: 'resourceful',
     name: 'Resourceful',
-    description: 'Gets more value from materials.',
+    description:
+      'Gathers materials and repairs shelter faster. Each repair uses 1 material instead of 2.',
     incompatibleWith: [],
     productivity: { materials: 1.2 },
     moraleLossMultiplier: 1,
@@ -21,7 +22,8 @@ export const TRAIT_DEFINITIONS = [
   {
     id: 'optimist',
     name: 'Optimist',
-    description: 'Loses morale slowly.',
+    description:
+      'Loses 35% less morale over time from injury and poor shelter at night. Direct event changes are unchanged.',
     incompatibleWith: ['hot-headed'],
     productivity: {},
     moraleLossMultiplier: 0.65,
@@ -29,7 +31,8 @@ export const TRAIT_DEFINITIONS = [
   {
     id: 'hot-headed',
     name: 'Hot-headed',
-    description: 'Works hard but reacts strongly to conflict.',
+    description:
+      'Gathers materials and repairs faster when injured, but loses 35% more morale over time from injury and poor shelter at night. Direct event changes are unchanged.',
     incompatibleWith: ['optimist', 'cautious'],
     productivity: { materials: 1.1 },
     moraleLossMultiplier: 1.35,
@@ -37,7 +40,8 @@ export const TRAIT_DEFINITIONS = [
   {
     id: 'tireless',
     name: 'Tireless',
-    description: 'Spends less energy while working and traveling.',
+    description:
+      'Travels faster and loses 25% less energy over time while awake. Direct event energy costs are unchanged.',
     incompatibleWith: [],
     productivity: { travel: 1.2 },
     moraleLossMultiplier: 1,
@@ -45,9 +49,10 @@ export const TRAIT_DEFINITIONS = [
   {
     id: 'cautious',
     name: 'Cautious',
-    description: 'Safer but slower in dangerous places.',
+    description:
+      'Loses 10% less morale over time from injury and poor shelter at night. Direct event changes are unchanged.',
     incompatibleWith: ['hot-headed'],
-    productivity: { dangerous: 0.85 },
+    productivity: {},
     moraleLossMultiplier: 0.9,
   },
 ] as const satisfies readonly TraitDefinition[];
@@ -77,7 +82,7 @@ export function generateTraitPair(random: DeterministicRandom): TraitId[] {
 
 export function productivityMultiplier(
   traits: readonly TraitId[],
-  kind: 'food' | 'materials' | 'travel' | 'dangerous',
+  kind: 'food' | 'materials' | 'travel',
 ): number {
   return traits.reduce((value, trait) => value * (TRAIT_BY_ID[trait].productivity[kind] ?? 1), 1);
 }
