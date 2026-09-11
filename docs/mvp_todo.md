@@ -100,16 +100,12 @@ historical evidence, with the measurement limitation described below.
       verify no fixed array position systematically owns the story. Keep
       group-wide consequences distinct from participant-specific memories.
       See [simulation.ts](../src/game/simulation.ts).
-- [ ] Reconcile the six existing traits with their descriptions before adding
-      more. [traits.ts](../src/game/traits.ts) describes Forager as finding
-      more food, while `workTicksFor` accelerates collection. Cautious declares
-      a dangerous-area modifier that current tasks do not consume, and
-      Hot-headed's morale multiplier applies to ongoing losses but not the
-      conflict event's direct morale effects. Audit each claimed benefit and
-      drawback, then correct the text or behavior. Expose short trait
-      explanations from survivor cards (currently names only), with keyboard
-      and touch access. Acceptance: each trait has a demonstrable effect that
-      matches its explanation and can be noticed during a run.
+- [x] Reconcile the six existing traits with their descriptions before adding
+      more. Descriptions now match collection speed, repair costs, travel,
+      awake energy loss, and ongoing injury/poor-shelter morale loss. Removed
+      the unused dangerous-area modifier; direct event effects remain unchanged.
+      Survivor cards expose explanations through keyboard- and touch-accessible
+      disclosures. Trait audit and verification are recorded in the issue #8 PR.
 - [ ] Add a concise, state-derived camp outlook to support the once-per-day
       priority decision: stored versus incoming supplies, source output still
       available after reservations, next replenishment, and the most urgent

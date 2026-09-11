@@ -607,6 +607,31 @@ button.priority.selected {
   color: #28635d;
 }
 
+.survivor-traits summary {
+  cursor: pointer;
+  min-height: 44px;
+  padding: 0.65rem 0;
+  font-weight: 700;
+}
+
+.survivor-traits summary:focus-visible {
+  outline: 3px solid #28635d;
+  outline-offset: 2px;
+}
+
+.survivor-traits dl {
+  margin: 0 0 0.5rem;
+}
+
+.survivor-traits dt {
+  font-weight: 700;
+}
+
+.survivor-traits dd {
+  margin: 0.2rem 0 0.6rem;
+  line-height: 1.5;
+}
+
 .survivor-route,
 .survivor-task,
 .survivor-injury,
@@ -1157,7 +1182,17 @@ code {
     font-size: 0.7rem;
   }
 
+  .production-overview .survivor-traits {
+    margin-top: 0;
+  }
+
+  .production-overview .survivor-traits summary {
+    line-height: 1.3;
+    padding: 0.4rem 0;
+  }
+
   .production-overview .need-grid {
+    margin-bottom: 0.25rem;
     gap: 0.25rem;
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1175,7 +1210,6 @@ code {
     font-size: 0.68rem;
   }
 
-  .production-overview .survivor-traits,
   .production-overview .survivor-route,
   .production-overview .survivor-task,
   .production-overview .survivor-injury,

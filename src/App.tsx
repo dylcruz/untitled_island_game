@@ -390,9 +390,17 @@ function SurvivorCard({
         </div>
         <strong className="survivor-alive">{survivor.alive ? 'Alive' : 'Lost'}</strong>
       </div>
-      <p className="survivor-traits">
-        <strong>Traits:</strong> {traitNames}
-      </p>
+      <details className="survivor-traits">
+        <summary>Traits: {traitNames}</summary>
+        <dl>
+          {survivor.traits.map((trait) => (
+            <div key={trait}>
+              <dt>{TRAIT_BY_ID[trait].name}</dt>
+              <dd>{TRAIT_BY_ID[trait].description}</dd>
+            </div>
+          ))}
+        </dl>
+      </details>
       <div className="need-grid" aria-label={`${survivor.name} condition meters`}>
         <StatusMeter label="Health" value={survivor.needs.health} kind="health" />
         <StatusMeter label="Hunger" value={hungerRemaining} kind="hunger" />
