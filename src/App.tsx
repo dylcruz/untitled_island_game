@@ -1,5 +1,7 @@
+import { deriveCampOutlook } from './game/campOutlook';
+import { CampOutlook } from './presentation/CampOutlook';
 import { getChoiceAvailability } from './game/choiceAvailability';
-import { formatSupply } from './presentation/supplies';
+import { formatSupply, sourceReplenishmentText } from './presentation/supplies';
 import { describeResolvedEffect } from './game/outcomes';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent, ReactElement } from 'react';
@@ -247,12 +249,6 @@ function needStatus(
   if (value <= criticalThreshold) return { label: 'Critical', tone: 'critical' };
   if (value <= watchThreshold) return { label: 'Low', tone: 'watch' };
   return { label: 'Stable', tone: 'good' };
-}
-
-function resourceStatus(value: number): { label: string; tone: 'good' | 'watch' | 'critical' } {
-  if (value <= 0) return { label: 'Depleted', tone: 'critical' };
-  if (value <= 2) return { label: 'Low', tone: 'watch' };
-  return { label: 'Stocked', tone: 'good' };
 }
 
 function StatusMeter({
@@ -702,6 +698,7 @@ export default function App(): ReactElement {
   const time = deriveTime(snapshot);
   const portraitVariants = portraitPresentationVariants(snapshot.survivors);
   const event = snapshot.activeEvent ? EVENT_BY_ID[snapshot.activeEvent.id] : null;
+  const outlook = deriveCampOutlook(snapshot);
   const activePriority = PRIORITY_DETAILS[snapshot.campPolicy.priority];
   const priorityChangeUsed = snapshot.campPolicy.lastChangedDay === snapshot.clock.day;
   const rescueDay = Math.ceil(snapshot.config.rescueTick / snapshot.config.ticksPerDay);
@@ -1028,36 +1025,15 @@ export default function App(): ReactElement {
                 <dl>
                   <div>
                     <dt>Water</dt>
-                    <dd>
-                      {formatSupply(snapshot.resources.water)}{' '}
-                      <span
-                        className={`resource-state resource-state-${resourceStatus(snapshot.resources.water).tone}`}
-                      >
-                        {resourceStatus(snapshot.resources.water).label}
-                      </span>
-                    </dd>
+                    <dd>{formatSupply(snapshot.resources.water)} stored</dd>
                   </div>
                   <div>
                     <dt>Food</dt>
-                    <dd>
-                      {formatSupply(snapshot.resources.food)}{' '}
-                      <span
-                        className={`resource-state resource-state-${resourceStatus(snapshot.resources.food).tone}`}
-                      >
-                        {resourceStatus(snapshot.resources.food).label}
-                      </span>
-                    </dd>
+                    <dd>{formatSupply(snapshot.resources.food)} stored</dd>
                   </div>
                   <div>
                     <dt>Materials</dt>
-                    <dd>
-                      {formatSupply(snapshot.resources.materials)}{' '}
-                      <span
-                        className={`resource-state resource-state-${resourceStatus(snapshot.resources.materials).tone}`}
-                      >
-                        {resourceStatus(snapshot.resources.materials).label}
-                      </span>
-                    </dd>
+                    <dd>{formatSupply(snapshot.resources.materials)} stored</dd>
                   </div>
                   <div>
                     <dt>Shelter</dt>
@@ -1087,11 +1063,22 @@ export default function App(): ReactElement {
               <section className="stats" aria-label="Source availability">
                 <h2>Source availability</h2>
                 <dl>
-                  {Object.values(snapshot.island.sourceStates).map((source) => (
+                  {outlook.sources.map((source) => (
                     <div key={source.id}>
                       <dt>{formatSourceId(source.id)}</dt>
                       <dd>
-                        {formatSupply(source.available)} / {source.capacity}
+                        {formatSupply(source.unreserved)} unreserved /{' '}
+                        {formatSupply(source.available)} total output (capacity {source.capacity}).{' '}
+                        {source.available === 0
+                          ? 'Depleted. '
+                          : source.unreserved === 0
+                            ? 'Fully reserved. '
+                            : ''}
+                        {sourceReplenishmentText(
+                          snapshot,
+                          source.replenishment,
+                          outlook.nextReplenishmentTick,
+                        )}
                       </dd>
                     </div>
                   ))}
@@ -1130,6 +1117,7 @@ export default function App(): ReactElement {
                     );
                   })}
                 </div>
+                <CampOutlook snapshot={snapshot} outlook={outlook} />
               </section>
             </>
           )}

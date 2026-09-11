@@ -6,3 +6,4 @@ export * from './events';
 export * from './traits';
 export * from './endings';
 export * from './simulation';
+export * from './campOutlook';

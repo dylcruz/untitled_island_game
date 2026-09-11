@@ -1,9 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { getChoiceAvailability } from '../game/choiceAvailability';
 import { EVENT_BY_ID } from '../game/events';
-import { formatSupply } from '../presentation/supplies';
+import { formatSupply, formatSupplyEstimate } from '../presentation/supplies';
 
 describe('supply presentation', () => {
+  it('rounds derived targets without changing conservative stock formatting', () => {
+    expect(formatSupplyEstimate(3 * 2.8)).toBe('8.4');
+    expect(formatSupplyEstimate(3 * 2.8 - 6)).toBe('2.4');
+    expect(formatSupplyEstimate(0.001)).toBe('<0.01');
+    expect(formatSupply(2 - Number.EPSILON)).toBe('1.99');
+  });
   it.each([
     [0, '0'],
     [0.25, '0.25'],
